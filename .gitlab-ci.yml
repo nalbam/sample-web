@@ -1,0 +1,31 @@
+# gitlab-ci
+
+stages:
+  - build
+  - release
+
+before_script:
+  - curl -s toast.sh/install-v3 | bash
+
+build:
+  stage: build
+  image: maven:latest
+  script:
+    - ~/toaster/toast.sh build version
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - target/
+
+release:
+  stage: release
+  image: nalbam/builder:awscli
+  script:
+    - ~/toaster/toast.sh release beanstalk
+    - ~/toaster/toast.sh release toast
+  artifacts:
+    paths:
+      - target/
+
+after_script:
+  - ls -alh target
