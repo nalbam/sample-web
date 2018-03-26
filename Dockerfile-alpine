@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM httpd:latest
+FROM httpd:alpine
 
 MAINTAINER me@nalbam.com
 
