@@ -1,7 +1,8 @@
 # sample-web
 ```
-FROM httpd:2.4
+FROM httpd:latest
 EXPOSE 80
 
-docker pull nalbam/sample-web:latest
+docker pull nalbam/sample-web:latest (28MB)
+docker pull nalbam/sample-web:alpine (69MB)
 ```
