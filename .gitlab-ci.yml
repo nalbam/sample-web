@@ -19,7 +19,7 @@ build:
 
 release:
   stage: release
-  image: nalbam/builder:awscli
+  image: nalbam/builder:alpine
   script:
     - ~/toaster/toast.sh release beanstalk
     - ~/toaster/toast.sh release toast
