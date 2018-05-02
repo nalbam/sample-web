@@ -4,28 +4,22 @@ stages:
   - build
   - release
 
-before_script:
-  - curl -s toast.sh/install-v3 | bash
-
 build:
   stage: build
-  image: maven:latest
-  script:
-    - ~/toaster/toast.sh build version
-    - mvn package -DskipTests
-  artifacts:
-    paths:
-      - target/
-
-release:
-  stage: release
   image: nalbam/builder:alpine
+  only:
+    - master
   script:
-    - ~/toaster/toast.sh release beanstalk
-    - ~/toaster/toast.sh release toast
-  artifacts:
-    paths:
-      - target/
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - docker build -t $IMAGE .
+
+deploy:
+  stage: deploy
+  image: nalbam/builder:alpine
+  only:
+    - master
+  script:
+    - docker push $IMAGE
 
 after_script:
   - ls -alh target
