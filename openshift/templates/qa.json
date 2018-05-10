@@ -3,8 +3,8 @@
   "apiVersion": "v1",
   "metadata": {
     "annotations": {
-      "iconClass": "icon-rh-integration",
-      "tags": "java",
+      "iconClass": "icon-nginx",
+      "tags": "nginx",
       "version": "1.0.0",
       "description": "sample web application."
     },
