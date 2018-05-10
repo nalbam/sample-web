@@ -1,0 +1,22 @@
+kind: BuildConfig
+apiVersion: v1
+metadata:
+  name: sample-web-pipeline
+spec:
+  runPolicy: Serial
+  strategy:
+    type: JenkinsPipeline
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        node('') {
+          stage 'build'
+            openshiftBuild(namespace: 'dev', buildConfig: 'sample-web', showBuildLogs: 'true')
+          stage 'deploy DEV'
+            openshiftDeploy(namespace: 'dev', deploymentConfig: 'sample-web')
+            openshiftScale(namespace: 'dev', deploymentConfig: 'sample-web', replicaCount: '2')
+          stage 'deploy QA'
+            input 'Proceeed ?'
+            openshiftTag(namespace: 'dev', sourceStream: 'sample-web', sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: 'sample-web', destinationTag: 'latest')
+            openshiftDeploy(namespace: 'qa', deploymentConfig: 'sample-web')
+            openshiftScale(namespace: 'qa', deploymentConfig: 'sample-web', replicaCount: '2')
+        }
