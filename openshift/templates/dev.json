@@ -6,7 +6,7 @@
       "iconClass": "icon-nginx",
       "tags": "nginx",
       "version": "1.0.0",
-      "description": "sample web application."
+      "description": "sample nginx application."
     },
     "name": "sample-web"
   },
@@ -14,7 +14,7 @@
     "template": "sample-web",
     "xpaas": "1.0.0"
   },
-  "message": "A new web application has been created in your project.",
+  "message": "A new nginx application has been created in your project.",
   "parameters": [
     {
       "name": "APPLICATION_NAME",
