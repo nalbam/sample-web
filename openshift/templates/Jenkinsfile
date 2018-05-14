@@ -1,0 +1,14 @@
+node('maven') {
+  stage 'Build'
+    openshiftBuild(namespace: 'ops', buildConfig: 'sample-web', showBuildLogs: 'true')
+  stage 'Deploy DEV'
+    openshiftTag(namespace: 'ops', sourceStream: 'sample-web', sourceTag: 'latest', destinationNamespace: 'dev', destinationStream: 'sample-web', destinationTag: 'latest')
+    openshiftDeploy(namespace: 'dev', deploymentConfig: 'sample-web')
+    openshiftScale(namespace: 'dev', deploymentConfig: 'sample-web', replicaCount: '2')
+  stage 'Proceeed QA'
+    input 'Proceeed ?'
+  stage 'Deploy QA'
+    openshiftTag(namespace: 'ops', sourceStream: 'sample-web', sourceTag: 'latest', destinationNamespace: 'qa', destinationStream: 'sample-web', destinationTag: 'latest')
+    openshiftDeploy(namespace: 'qa', deploymentConfig: 'sample-web')
+    openshiftScale(namespace: 'qa', deploymentConfig: 'sample-web', replicaCount: '2')
+}
