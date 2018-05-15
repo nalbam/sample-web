@@ -155,6 +155,10 @@
               {
                 "name": "SOURCE_REPOSITORY_REF",
                 "value": "${SOURCE_REPOSITORY_REF}"
+              },
+              {
+                "name": "NGINX_VERSION",
+                "value": "${NGINX_VERSION}"
               }
             ]
           }
