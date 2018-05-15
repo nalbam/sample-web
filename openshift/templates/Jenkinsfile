@@ -21,7 +21,7 @@ node() {
   }
   stage('Approve QA') {
     timeout(time: 15, unit: 'MINUTES') {
-      input(message: 'Approve ?')
+      input(message: 'Approve QA?')
     }
   }
   stage('Deploy QA') {
