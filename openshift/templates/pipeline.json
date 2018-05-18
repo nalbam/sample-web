@@ -73,6 +73,13 @@
       "description": "Version of NGINX image to be used (1.12 by default).",
       "value": "1.12",
       "required": true
+    },
+    {
+      "name": "SLACK_WEBHOOK_URL",
+      "displayName": "Slack Webhook URL",
+      "description": "Send your notification",
+      "value": "",
+      "required": false
     }
   ],
   "objects": [
@@ -159,6 +166,10 @@
               {
                 "name": "NGINX_VERSION",
                 "value": "${NGINX_VERSION}"
+              },
+              {
+                "name": "SLACK_WEBHOOK_URL",
+                "value": "${SLACK_WEBHOOK_URL}"
               }
             ]
           }
