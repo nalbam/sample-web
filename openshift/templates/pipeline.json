@@ -73,6 +73,20 @@
       "description": "Version of NGINX image to be used (1.12 by default).",
       "value": "1.12",
       "required": true
+    },
+    {
+      "name": "JENKINS_URL",
+      "displayName": "Jenkins URL",
+      "description": "The Jenkins URL",
+      "value": "http://jenkins.ops.svc:8080",
+      "required": false
+    },
+    {
+      "name": "SLACK_WEBHOOK_URL",
+      "displayName": "Slack Webhook URL",
+      "description": "Send your notification",
+      "value": "",
+      "required": false
     }
   ],
   "objects": [
@@ -166,6 +180,14 @@
               {
                 "name": "NGINX_VERSION",
                 "value": "${NGINX_VERSION}"
+              },
+              {
+                "name": "JENKINS_URL",
+                "value": "${JENKINS_URL}"
+              },
+              {
+                "name": "SLACK_WEBHOOK_URL",
+                "value": "${SLACK_WEBHOOK_URL}"
               }
             ]
           }
