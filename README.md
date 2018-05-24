@@ -19,6 +19,15 @@ oc policy add-role-to-user admin admin -n dev
 oc policy add-role-to-user admin admin -n qa
 ```
 
+### Create Catalog
+```bash
+oc create -f https://raw.githubusercontent.com/nalbam/sample-web/master/openshift/templates/deploy.json \
+          -n ops
+
+oc create -f https://raw.githubusercontent.com/nalbam/sample-web/master/openshift/templates/pipeline.json \
+          -n ops
+```
+
 ### Create Application
 ```bash
 oc new-app -f https://raw.githubusercontent.com/nalbam/sample-web/master/openshift/templates/deploy.json -n dev
