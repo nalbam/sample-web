@@ -75,13 +75,6 @@
       "required": true
     },
     {
-      "name": "NGINX_VERSION",
-      "displayName": "NGINX Version",
-      "description": "Version of NGINX image to be used (1.12 by default).",
-      "value": "1.12",
-      "required": true
-    },
-    {
       "name": "JENKINS_URL",
       "displayName": "Jenkins URL",
       "description": "The Jenkins URL",
@@ -94,6 +87,13 @@
       "description": "Send your notification",
       "value": "",
       "required": false
+    },
+    {
+      "name": "NGINX_VERSION",
+      "displayName": "NGINX Version",
+      "description": "Version of NGINX image to be used (1.12 by default).",
+      "value": "1.12",
+      "required": true
     }
   ],
   "objects": [
@@ -170,7 +170,7 @@
         "strategy": {
           "type": "JenkinsPipeline",
           "jenkinsPipelineStrategy": {
-            "jenkinsfilePath": "openshift/templates/Jenkinsfile",
+            "jenkinsfilePath": "openshift/pipeline/Jenkinsfile",
             "env": [
               {
                 "name": "APPLICATION_NAME",
@@ -189,16 +189,16 @@
                 "value": "${SOURCE_REPOSITORY_SECRET}"
               },
               {
-                "name": "NGINX_VERSION",
-                "value": "${NGINX_VERSION}"
-              },
-              {
                 "name": "JENKINS_URL",
                 "value": "${JENKINS_URL}"
               },
               {
                 "name": "SLACK_WEBHOOK_URL",
                 "value": "${SLACK_WEBHOOK_URL}"
+              },
+              {
+                "name": "NGINX_VERSION",
+                "value": "${NGINX_VERSION}"
               }
             ]
           }
