@@ -8,10 +8,10 @@
       "version": "1.0.0",
       "description": "sample nginx application."
     },
-    "name": "bespin-web-pipeline"
+    "name": "sample-web-pipeline"
   },
   "labels": {
-    "template": "bespin-web-pipeline",
+    "template": "sample-web-pipeline",
     "xpaas": "1.0.0"
   },
   "message": "A new nginx application has been created in your project.",
