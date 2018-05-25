@@ -21,6 +21,8 @@ node() {
   String url = "${jenkins}/${job}/detail/ops-${env.APPLICATION_NAME}-pipeline/${env.BUILD_NUMBER}/pipeline/"
   echo "PIPELINE    ${url}"
 
+  String template = "https://raw.githubusercontent.com/nalbam/${app}/master/openshift/templates/deploy.json"
+
   stage('Build Image') {
     openshiftBuild(namespace: 'ops', buildConfig: app, showBuildLogs: 'true')
     openshiftTag(namespace: 'ops', sourceStream: app, sourceTag: 'latest', destinationNamespace: 'ops', destinationStream: app, destinationTag: ver)
