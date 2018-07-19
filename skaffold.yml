@@ -1,0 +1,10 @@
+apiVersion: skaffold/v1alpha2
+kind: Config
+build:
+  artifacts:
+  - imageName: registry-devops.apps.opspresso.com/sample/sample-web
+deploy:
+  helm:
+    releases:
+    - name: sample-web
+      chartPath: charts/nginx
