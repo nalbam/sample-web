@@ -1,6 +1,6 @@
 [environments]
   [environments.development]
-    name = "sample-web"
+    name = "sample-web-development"
     namespace = "default"
     wait = true
     watch = false
@@ -9,7 +9,7 @@
     dockerfile = ""
     chart = ""
   [environments.staging]
-    name = "sample-web"
+    name = "sample-web-staging"
     namespace = "staging"
     wait = true
     watch = false
