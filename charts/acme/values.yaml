@@ -21,8 +21,8 @@ ingress:
   enabled: true
 basedomain: apps.opspresso.com
 env:
-- name: PROFILE
-  valueFrom:
-    configMapKeyRef:
-      name: sample-web
-      key: PROFILE
+# - name: PROFILE
+#   valueFrom:
+#     configMapKeyRef:
+#       name: sample-web
+#       key: PROFILE
