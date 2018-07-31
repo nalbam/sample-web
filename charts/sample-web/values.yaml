@@ -1,9 +1,10 @@
 # Default values for nginx.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+nameOverride: sample-web
 replicaCount: 1
 image:
-  repository: docker-registory/sample-node
+  repository: docker-registory/sample-web
   tag: latest
   pullPolicy: IfNotPresent
 service:
