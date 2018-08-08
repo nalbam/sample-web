@@ -16,8 +16,8 @@ volumes: [
     stage("Checkout") {
       git(url: "$REPOSITORY_URL", branch: "$BRANCH")
     }
-    stage("Deploy Development") {
-      if (BRANCH != 'master') {
+    if (BRANCH != 'master') {
+      stage("Deploy Development") {
         container("builder") {
           def NAMESPACE = "development"
           sh """
@@ -28,8 +28,8 @@ volumes: [
         }
       }
     }
-    stage("Make Version") {
-      if (BRANCH == 'master') {
+    if (BRANCH == 'master') {
+      stage("Make Version") {
         container("builder") {
           sh """
             bash /root/extra/jenkins-domain.sh
@@ -37,9 +37,7 @@ volumes: [
           """
         }
       }
-    }
-    stage("Image Build") {
-      if (BRANCH == 'master') {
+      stage("Image Build") {
         container("docker") {
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
           def VERSION = readFile "/home/jenkins/VERSION"
@@ -49,9 +47,7 @@ volumes: [
           """
         }
       }
-    }
-    stage("Chart Build") {
-      if (BRANCH == 'master') {
+      stage("Chart Build") {
         container("builder") {
           def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
@@ -72,9 +68,7 @@ volumes: [
           """
         }
       }
-    }
-    stage("Deploy Staging") {
-      if (BRANCH == 'master') {
+      stage("Deploy Staging") {
         container("builder") {
           def NAMESPACE = "staging"
           def VERSION = readFile "/home/jenkins/VERSION"
@@ -86,9 +80,7 @@ volumes: [
           """
         }
       }
-    }
-    stage("Proceed Production") {
-      if (BRANCH == 'master') {
+      stage("Proceed Production") {
         container("builder") {
           def VERSION = readFile "/home/jenkins/VERSION"
           def JENKINS = readFile "/home/jenkins/JENKINS"
@@ -98,9 +90,7 @@ volumes: [
           }
         }
       }
-    }
-    stage("Deploy Production") {
-      if (BRANCH == 'master') {
+      stage("Deploy Production") {
         container("builder") {
           def NAMESPACE = "production"
           def VERSION = readFile "/home/jenkins/VERSION"
