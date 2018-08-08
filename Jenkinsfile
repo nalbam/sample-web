@@ -35,10 +35,6 @@ volumes: [
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
-          # draft
-          sed -i -e "s/name = .*/name = \"$IMAGE_NAME-$NAMESPACE\"/" draft.toml
-          sed -i -e "s/namespace = .*/namespace = \"$NAMESPACE\"/" draft.toml
-          cat draft.toml
           # chart
           sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
           sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
@@ -59,6 +55,9 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
+            sed -i -e "s/name = .*/name = $IMAGE_NAME-$NAMESPACE/" draft.toml
+            sed -i -e "s/namespace = .*/namespace = $NAMESPACE/" draft.toml
+            cat draft.toml
             draft up --docker-debug
           """
         }
