@@ -15,8 +15,8 @@ volumes: [
 ]) {
   node(label) {
     stage("Checkout") {
-      if (env.SOURCE_REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "ops-${env.SOURCE_REPOSITORY_SECRET}")
+      if (env.REPOSITORY_SECRET) {
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "ops-${env.REPOSITORY_SECRET}")
       } else {
         git(url: "$REPOSITORY_URL", branch: "$BRANCH")
       }
