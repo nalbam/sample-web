@@ -1,4 +1,10 @@
 def label = "worker-${UUID.randomUUID().toString()}"
+
+def REPOSITORY_URL = "https://github.com/nalbam/sample-web"
+def REPOSITORY_SECRET = ""
+def BRANCH = "master"
+def IMAGE_NAME = "sample-web"
+
 properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
