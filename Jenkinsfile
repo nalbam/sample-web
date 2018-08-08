@@ -2,7 +2,8 @@ def label = "worker-${UUID.randomUUID().toString()}"
 properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
-podTemplate(label: label, containers: [
+podTemplate(label: label,
+containers: [
   containerTemplate(name: "builder", image: "quay.io/nalbam/builder", command: "cat", ttyEnabled: true),
   containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true)
 ],
@@ -15,7 +16,21 @@ volumes: [
     stage("Checkout") {
       git(url: "$REPOSITORY_URL", branch: "$BRANCH")
     }
+    stage("Deploy Development") {
+      when {
+        not { branch 'master' }
+      }
+      container("builder") {
+        def NAMESPACE = "development"
+        sh """
+          sed -i -e "s/name: .*/name: \"$IMAGE_NAME\"" draft.toml
+          sed -i -e "s/namespace: .*/namespace: \"$NAMESPACE\"" draft.toml
+          draft up
+        """
+      }
+    }
     stage("Make Version") {
+      when { branch 'master' }
       container("builder") {
         sh """
           bash /root/extra/jenkins-domain.sh
@@ -24,6 +39,7 @@ volumes: [
       }
     }
     stage("Image Build") {
+      when { branch 'master' }
       container("docker") {
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
         def VERSION = readFile "/home/jenkins/VERSION"
@@ -34,6 +50,7 @@ volumes: [
       }
     }
     stage("Chart Build") {
+      when { branch 'master' }
       container("builder") {
         def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
@@ -54,9 +71,10 @@ volumes: [
         """
       }
     }
-    stage("Deploy Development") {
+    stage("Deploy Staging") {
+      when { branch 'master' }
       container("builder") {
-        def NAMESPACE = "development"
+        def NAMESPACE = "staging"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
           helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
@@ -66,19 +84,21 @@ volumes: [
         """
       }
     }
-    stage("Proceed Staging") {
+    stage("Proceed Production") {
+      when { branch 'master' }
       container("builder") {
         def VERSION = readFile "/home/jenkins/VERSION"
         def JENKINS = readFile "/home/jenkins/JENKINS"
         def URL = "https://$JENKINS/blue/organizations/jenkins/$env.JOB_NAME/detail/$env.JOB_NAME/$env.BUILD_NUMBER/pipeline"
         timeout(time: 30, unit: "MINUTES") {
-          input(message: "Proceed Staging?: $IMAGE_NAME-$VERSION")
+          input(message: "Proceed Production?: $IMAGE_NAME-$VERSION")
         }
       }
     }
-    stage("Deploy Staging") {
+    stage("Deploy Production") {
+      when { branch 'master' }
       container("builder") {
-        def NAMESPACE = "staging"
+        def NAMESPACE = "production"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
           helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
