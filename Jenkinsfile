@@ -51,8 +51,8 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
-            sed -i -e "s/name: .*/name: $IMAGE_NAME-$NAMESPACE/" draft.toml
-            sed -i -e "s/namespace: .*/namespace: $NAMESPACE/" draft.toml
+            sed -i -e "s/name = .*/name = $IMAGE_NAME-$NAMESPACE/" draft.toml
+            sed -i -e "s/namespace = .*/namespace = $NAMESPACE/" draft.toml
             draft up --docker-debug
           """
         }
