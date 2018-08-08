@@ -10,11 +10,44 @@ containers: [
 volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
   hostPathVolume(mountPath: "/home/jenkins/.version", hostPath: "/home/jenkins/.version"),
+  hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
     stage("Checkout") {
-      git(url: "$REPOSITORY_URL", branch: "$BRANCH")
+      if (env.REPOSITORY_SECRET) {
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "$REPOSITORY_SECRET")
+      } else {
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH")
+      }
+    }
+    stage("Make Version") {
+      container("builder") {
+        sh """
+          bash /root/extra/jenkins-domain.sh
+          bash /root/extra/jenkins-version.sh $IMAGE_NAME $BRANCH
+        """
+      }
+    }
+    stage("Make Charts") {
+      container("builder") {
+        def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
+        def REGISTRY = readFile "/home/jenkins/REGISTRY"
+        def VERSION = readFile "/home/jenkins/VERSION"
+        sh """
+          # Chart.yaml
+          sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
+          sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
+          cat charts/acme/Chart.yaml
+          # values.yaml
+          sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" charts/acme/values.yaml
+          sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" charts/acme/values.yaml
+          sed -i -e "s|tag: .*|tag: $VERSION|" charts/acme/values.yaml
+          cat charts/acme/values.yaml
+          # mv
+          mv charts/acme charts/$IMAGE_NAME
+        """
+      }
     }
     if (BRANCH != 'master') {
       stage("Deploy Development") {
@@ -22,23 +55,16 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
-            sed -i -e "s/name: .*/name: $IMAGE_NAME-$NAMESPACE" draft.toml
-            sed -i -e "s/namespace: .*/namespace: $NAMESPACE" draft.toml
-            draft up
+            sed -i -e "s/NAMESPACE/$NAMESPACE/g" draft.toml
+            sed -i -e "s/NAME/$IMAGE_NAME-$NAMESPACE/g" draft.toml
+            cat draft.toml
+            draft up --docker-debug
           """
         }
       }
     }
     if (BRANCH == 'master') {
-      stage("Make Version") {
-        container("builder") {
-          sh """
-            bash /root/extra/jenkins-domain.sh
-            bash /root/extra/jenkins-version.sh $IMAGE_NAME $BRANCH
-          """
-        }
-      }
-      stage("Image Build") {
+      stage("Build Image") {
         container("docker") {
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
           def VERSION = readFile "/home/jenkins/VERSION"
@@ -48,20 +74,14 @@ volumes: [
           """
         }
       }
-      stage("Chart Build") {
+      stage("Build Charts") {
         container("builder") {
           def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
           def VERSION = readFile "/home/jenkins/VERSION"
           sh """
             bash /root/extra/helm-init.sh
-            mv charts/acme charts/$IMAGE_NAME
             cd charts/$IMAGE_NAME
-            sed -i -e "s/name: .*/name: $IMAGE_NAME/" Chart.yaml
-            sed -i -e "s/version: .*/version: $VERSION/" Chart.yaml
-            sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" values.yaml
-            sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" values.yaml
-            sed -i -e "s|tag: .*|tag: $VERSION|" values.yaml
             helm lint .
             helm push . chartmuseum
             helm repo update
