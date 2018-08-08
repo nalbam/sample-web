@@ -10,6 +10,7 @@ containers: [
 volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
   hostPathVolume(mountPath: "/home/jenkins/.version", hostPath: "/home/jenkins/.version"),
+  hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
@@ -22,8 +23,8 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
-            sed -i -e "s/name: .*/name: $IMAGE_NAME-$NAMESPACE" draft.toml
-            sed -i -e "s/namespace: .*/namespace: $NAMESPACE" draft.toml
+            sed -i -e \"s/name: .*/name: $IMAGE_NAME-$NAMESPACE\" draft.toml
+            sed -i -e \"s/namespace: .*/namespace: $NAMESPACE\" draft.toml
             draft up
           """
         }
