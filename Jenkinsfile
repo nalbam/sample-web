@@ -35,11 +35,11 @@ volumes: [
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
-          # chart
+          # Chart.yaml
           sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
           sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
           cat charts/acme/Chart.yaml
-          # values
+          # values.yaml
           sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" charts/acme/values.yaml
           sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" charts/acme/values.yaml
           sed -i -e "s|tag: .*|tag: $VERSION|" charts/acme/values.yaml
@@ -56,9 +56,8 @@ volumes: [
           sh """
             bash /root/extra/draft-init.sh
             sed -i -e "s/name = .*/name = $IMAGE_NAME-$NAMESPACE/" draft.toml
-            sed -i -e "s/namespace = .*/namespace = $NAMESPACE/" draft.toml
             cat draft.toml
-            draft up --docker-debug
+            draft up -e $NAMESPACE --docker-debug
           """
         }
       }
