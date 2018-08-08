@@ -2,7 +2,6 @@ def label = "worker-${UUID.randomUUID().toString()}"
 
 def REPOSITORY_URL = "https://github.com/nalbam/sample-web"
 def REPOSITORY_SECRET = ""
-def BRANCH = "master"
 def IMAGE_NAME = "sample-web"
 
 properties([
@@ -15,23 +14,22 @@ containers: [
 ],
 volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
-  hostPathVolume(mountPath: "/home/jenkins/.version", hostPath: "/home/jenkins/.version"),
   hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
     stage("Checkout") {
       if (env.REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "$REPOSITORY_SECRET")
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME", credentialsId: "$REPOSITORY_SECRET")
       } else {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH")
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME")
       }
     }
     stage("Make Version") {
       container("builder") {
         sh """
           bash /root/extra/jenkins-domain.sh
-          bash /root/extra/jenkins-version.sh $IMAGE_NAME $BRANCH
+          bash /root/extra/jenkins-version.sh $IMAGE_NAME $BRANCH_NAME
         """
       }
     }
@@ -55,7 +53,7 @@ volumes: [
         """
       }
     }
-    if (BRANCH != 'master') {
+    if (BRANCH_NAME != 'master') {
       stage("Deploy Development") {
         container("builder") {
           def NAMESPACE = "development"
@@ -69,7 +67,7 @@ volumes: [
         }
       }
     }
-    if (BRANCH == 'master') {
+    if (BRANCH_NAME == 'master') {
       stage("Build Image") {
         container("docker") {
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
