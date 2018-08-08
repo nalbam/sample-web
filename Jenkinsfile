@@ -17,16 +17,15 @@ volumes: [
       git(url: "$REPOSITORY_URL", branch: "$BRANCH")
     }
     stage("Deploy Development") {
-      when {
-        not { branch 'master' }
-      }
-      container("builder") {
-        def NAMESPACE = "development"
-        sh """
-          sed -i -e "s/name: .*/name: \"$IMAGE_NAME\"" draft.toml
-          sed -i -e "s/namespace: .*/namespace: \"$NAMESPACE\"" draft.toml
-          draft up
-        """
+      if (BRANCH != 'master') {
+        container("builder") {
+          def NAMESPACE = "development"
+          sh """
+            sed -i -e "s/name: .*/name: \"$IMAGE_NAME\"" draft.toml
+            sed -i -e "s/namespace: .*/namespace: \"$NAMESPACE\"" draft.toml
+            draft up
+          """
+        }
       }
     }
     stage("Make Version") {
