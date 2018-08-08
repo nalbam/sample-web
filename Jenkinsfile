@@ -14,13 +14,13 @@ volumes: [
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
-    stage("Checkout") {
-      if (env.SOURCE_REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "ops-${env.SOURCE_REPOSITORY_SECRET}")
-      } else {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH")
-      }
-    }
+    // stage("Checkout") {
+    //   if (env.SOURCE_REPOSITORY_SECRET) {
+    //     git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "ops-${env.SOURCE_REPOSITORY_SECRET}")
+    //   } else {
+    //     git(url: "$REPOSITORY_URL", branch: "$BRANCH")
+    //   }
+    // }
     stage("Make Version") {
       container("builder") {
         sh """
@@ -55,7 +55,8 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
-            sed -i -e "s/acme/$IMAGE_NAME-$NAMESPACE/" draft.toml
+            sed -i -e "s/NAMESPACE/$NAMESPACE/g" draft.toml
+            sed -i -e "s/NAME/$IMAGE_NAME-$NAMESPACE/g" draft.toml
             cat draft.toml
             draft up -e $NAMESPACE --docker-debug
           """

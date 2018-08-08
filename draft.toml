@@ -1,7 +1,7 @@
 [environments]
-  [environments.development]
-    name = "acme"
-    namespace = "default"
+  [environments.NAMESPACE]
+    name = "NAME"
+    namespace = "NAMESPACE"
     wait = true
     watch = false
     watch-delay = 2
