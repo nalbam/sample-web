@@ -16,7 +16,7 @@ volumes: [
   node(label) {
     stage("Checkout") {
       if (env.REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "ops-${env.REPOSITORY_SECRET}")
+        git(url: "$REPOSITORY_URL", branch: "$BRANCH", credentialsId: "$REPOSITORY_SECRET")
       } else {
         git(url: "$REPOSITORY_URL", branch: "$BRANCH")
       }
@@ -58,7 +58,7 @@ volumes: [
             sed -i -e "s/NAMESPACE/$NAMESPACE/g" draft.toml
             sed -i -e "s/NAME/$IMAGE_NAME-$NAMESPACE/g" draft.toml
             cat draft.toml
-            draft up -e $NAMESPACE --docker-debug
+            draft up --docker-debug
           """
         }
       }
