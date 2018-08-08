@@ -21,8 +21,9 @@ volumes: [
         container("builder") {
           def NAMESPACE = "development"
           sh """
-            sed -i -e "s/name: .*/name: \"$IMAGE_NAME\"" draft.toml
-            sed -i -e "s/namespace: .*/namespace: \"$NAMESPACE\"" draft.toml
+            bash /root/extra/draft-init.sh
+            sed -i -e "s/name: .*/name: $IMAGE_NAME-$NAMESPACE" draft.toml
+            sed -i -e "s/namespace: .*/namespace: $NAMESPACE" draft.toml
             draft up
           """
         }
@@ -71,28 +72,6 @@ volumes: [
       stage("Deploy Staging") {
         container("builder") {
           def NAMESPACE = "staging"
-          def VERSION = readFile "/home/jenkins/VERSION"
-          sh """
-            helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                        --version $VERSION --namespace $NAMESPACE --devel \
-                        --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
-            helm history $IMAGE_NAME-$NAMESPACE
-          """
-        }
-      }
-      stage("Proceed Production") {
-        container("builder") {
-          def VERSION = readFile "/home/jenkins/VERSION"
-          def JENKINS = readFile "/home/jenkins/JENKINS"
-          def URL = "https://$JENKINS/blue/organizations/jenkins/$env.JOB_NAME/detail/$env.JOB_NAME/$env.BUILD_NUMBER/pipeline"
-          timeout(time: 30, unit: "MINUTES") {
-            input(message: "Proceed Production?: $IMAGE_NAME-$VERSION")
-          }
-        }
-      }
-      stage("Deploy Production") {
-        container("builder") {
-          def NAMESPACE = "production"
           def VERSION = readFile "/home/jenkins/VERSION"
           sh """
             helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
