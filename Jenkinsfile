@@ -29,7 +29,7 @@ volumes: [
         """
       }
     }
-    stage("Make Chart") {
+    stage("Make Charts") {
       container("builder") {
         def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
@@ -69,7 +69,7 @@ volumes: [
           """
         }
       }
-      stage("Build Chart") {
+      stage("Build Charts") {
         container("builder") {
           def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
           def REGISTRY = readFile "/home/jenkins/REGISTRY"
