@@ -35,13 +35,21 @@ volumes: [
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
+          # draft
+          sed -i -e "s/name = .*/name = \"$IMAGE_NAME-$NAMESPACE\"/" draft.toml
+          sed -i -e "s/namespace = .*/namespace = \"$NAMESPACE\"/" draft.toml
+          cat draft.toml
+          # chart
+          sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
+          sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
+          cat charts/acme/Chart.yaml
+          # values
+          sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" charts/acme/values.yaml
+          sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" charts/acme/values.yaml
+          sed -i -e "s|tag: .*|tag: $VERSION|" charts/acme/values.yaml
+          cat charts/acme/values.yaml
+          # mv
           mv charts/acme charts/$IMAGE_NAME
-          cd charts/$IMAGE_NAME
-          sed -i -e "s/name: .*/name: $IMAGE_NAME/" Chart.yaml
-          sed -i -e "s/version: .*/version: $VERSION/" Chart.yaml
-          sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" values.yaml
-          sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" values.yaml
-          sed -i -e "s|tag: .*|tag: $VERSION|" values.yaml
         """
       }
     }
@@ -51,10 +59,7 @@ volumes: [
           def NAMESPACE = "development"
           sh """
             bash /root/extra/draft-init.sh
-            sed -i -e "s/name = .*/name = \"$IMAGE_NAME-$NAMESPACE\"/" draft.toml
-            sed -i -e "s/namespace = .*/namespace = \"$NAMESPACE\"/" draft.toml
-            cat draft.toml
-            draft up -e $NAMESPACE --docker-debug
+            draft up --docker-debug
           """
         }
       }
