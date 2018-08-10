@@ -8,7 +8,7 @@ properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
 podTemplate(label: label, containers: [
-  containerTemplate(name: "builder", image: "nalbam/builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
+  containerTemplate(name: "builder", image: "quay.io/nalbam/builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
   containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true, alwaysPullImage: true),
   containerTemplate(name: "maven", image: "maven", command: "cat", ttyEnabled: true, alwaysPullImage: true),
   containerTemplate(name: "node", image: "node", command: "cat", ttyEnabled: true, alwaysPullImage: true)
@@ -63,7 +63,7 @@ podTemplate(label: label, containers: [
             mvn package -s .m2/settings.xml
           """
         }
-        notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+        //notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
       }
     }
     else if (LANG == 'nodejs') {
@@ -75,7 +75,7 @@ podTemplate(label: label, containers: [
             npm run build
           """
         }
-        notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+        //notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
       }
     }
     else {
@@ -139,12 +139,11 @@ podTemplate(label: label, containers: [
     }
   }
 }
-
-def notify(color, message) {
-  try {
-    if (env.SLACK_WEBHOOK_URL) {
-      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$color '$message'"
-    }
-  } catch (ignored) {
-  }
-}
+// def notify(COLOR, MESSAGE) {
+//   try {
+//     if (SLACK_TOKEN) {
+//       sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
+//     }
+//   } catch (ignored) {
+//   }
+// }
