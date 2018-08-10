@@ -1,25 +1,24 @@
-def label = "worker-${UUID.randomUUID().toString()}"
-
 def REPOSITORY_URL = "https://github.com/nalbam/sample-web"
 def REPOSITORY_SECRET = ""
 def IMAGE_NAME = "sample-web"
 
+def label = "worker-${UUID.randomUUID().toString()}"
 properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
-podTemplate(label: label,
-containers: [
-  containerTemplate(name: "builder", image: "quay.io/nalbam/builder", command: "cat", ttyEnabled: true),
-  containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true)
-],
-volumes: [
+podTemplate(label: label, containers: [
+  containerTemplate(name: "builder", image: "nalbam/builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
+  containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true, alwaysPullImage: true),
+  containerTemplate(name: "maven", image: "maven", command: "cat", ttyEnabled: true, alwaysPullImage: true),
+  containerTemplate(name: "node", image: "node", command: "cat", ttyEnabled: true, alwaysPullImage: true)
+], volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
   hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
     stage("Checkout") {
-      if (env.REPOSITORY_SECRET) {
+      if (REPOSITORY_SECRET) {
         git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME", credentialsId: "$REPOSITORY_SECRET")
       } else {
         git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME")
@@ -28,8 +27,7 @@ volumes: [
     stage("Make Version") {
       container("builder") {
         sh """
-          bash /root/extra/jenkins-domain.sh
-          bash /root/extra/jenkins-version.sh $IMAGE_NAME $BRANCH_NAME
+          bash /root/extra/build-init.sh $IMAGE_NAME $BRANCH_NAME
         """
       }
     }
@@ -39,17 +37,46 @@ volumes: [
         def REGISTRY = readFile "/home/jenkins/REGISTRY"
         def VERSION = readFile "/home/jenkins/VERSION"
         sh """
-          # Chart.yaml
           sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
           sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
-          cat charts/acme/Chart.yaml
-          # values.yaml
           sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" charts/acme/values.yaml
           sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" charts/acme/values.yaml
           sed -i -e "s|tag: .*|tag: $VERSION|" charts/acme/values.yaml
-          cat charts/acme/values.yaml
-          # mv
           mv charts/acme charts/$IMAGE_NAME
+        """
+      }
+    }
+    def LANG = readFile "/home/jenkins/SOURCE_LANG"
+    if (LANG == 'java') {
+      stage("Build") {
+        container("maven") {
+          def NEXUS = readFile "/home/jenkins/NEXUS"
+          if (NEXUS != '') {
+            def BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
+            def NEXUS_PUBLIC = "https://sonatype-nexus-devops.$BASE_DOMAIN/repository/maven-public/"
+            sh "sed -i 's|<!-- ### configured mirrors ### -->|<mirror><id>mirror</id><url>$NEXUS_PUBLIC</url><mirrorOf>*</mirrorOf></mirror>|' .m2/settings.xml"
+          }
+          sh """
+            mvn package -s .m2/settings.xml
+          """
+        }
+      }
+    }
+    else if (LANG == 'nodejs') {
+      stage("Build") {
+        container("node") {
+          def ROOT = readFile "/home/jenkins/SOURCE_ROOT"
+          sh """
+            cd $ROOT
+            npm run build
+          """
+        }
+      }
+    }
+    else {
+      stage("Build") {
+        sh """
+          echo "skipped."
         """
       }
     }
@@ -61,7 +88,6 @@ volumes: [
             bash /root/extra/draft-init.sh
             sed -i -e "s/NAMESPACE/$NAMESPACE/g" draft.toml
             sed -i -e "s/NAME/$IMAGE_NAME-$NAMESPACE/g" draft.toml
-            cat draft.toml
             draft up --docker-debug
           """
         }
@@ -99,8 +125,8 @@ volumes: [
           def VERSION = readFile "/home/jenkins/VERSION"
           sh """
             helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                        --version $VERSION --namespace $NAMESPACE --devel \
-                        --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
+                         --version $VERSION --namespace $NAMESPACE --devel \
+                         --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
             helm history $IMAGE_NAME-$NAMESPACE
           """
         }
