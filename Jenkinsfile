@@ -97,8 +97,8 @@ podTemplate(label: label, containers: [
       }
     }
     if (BRANCH_NAME == 'master') {
-      stage("Build Image") {
-        parallel {
+      // stage("Build Image") {
+        parallel("Build Image") {
           stage("Build Docker") {
             container("docker") {
               sh """
@@ -120,7 +120,7 @@ podTemplate(label: label, containers: [
             }
           }
         }
-      }
+      // }
       stage("Staging") {
         container("builder") {
           def NAMESPACE = "staging"
