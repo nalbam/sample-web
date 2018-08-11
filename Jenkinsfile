@@ -98,16 +98,16 @@ podTemplate(label: label, containers: [
     }
     if (BRANCH_NAME == 'master') {
       stage("Build Image") {
-        parallel {
-          stage("Build Docker") {
+        parallel(
+          "Build Docker": {
             container("docker") {
               sh """
                 docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
                 docker push $REGISTRY/$IMAGE_NAME:$VERSION
               """
             }
-          }
-          stage("Build Charts") {
+          },
+          "Build Charts": {
             container("builder") {
               sh """
                 bash /root/extra/helm-init.sh
@@ -119,7 +119,29 @@ podTemplate(label: label, containers: [
               """
             }
           }
-        }
+        )
+        // parallel {
+        //   stage("Build Docker") {
+        //     container("docker") {
+        //       sh """
+        //         docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
+        //         docker push $REGISTRY/$IMAGE_NAME:$VERSION
+        //       """
+        //     }
+        //   }
+        //   stage("Build Charts") {
+        //     container("builder") {
+        //       sh """
+        //         bash /root/extra/helm-init.sh
+        //         cd charts/$IMAGE_NAME
+        //         helm lint .
+        //         helm push . chartmuseum
+        //         helm repo update
+        //         helm search $IMAGE_NAME
+        //       """
+        //     }
+        //   }
+        // }
       }
       stage("Staging") {
         container("builder") {
