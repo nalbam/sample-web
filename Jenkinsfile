@@ -54,7 +54,7 @@ podTemplate(label: label, containers: [
         """
       }
     }
-    if (SOURCE_LANG == 'java') {
+    if (SOURCE_LANG == "java") {
       stage("Build") {
         container("maven") {
           sh """
@@ -65,7 +65,7 @@ podTemplate(label: label, containers: [
         }
       }
     }
-    else if (SOURCE_LANG == 'nodejs') {
+    else if (SOURCE_LANG == "nodejs") {
       stage("Build") {
         container("node") {
           sh """
@@ -83,7 +83,7 @@ podTemplate(label: label, containers: [
         """
       }
     }
-    if (BRANCH_NAME != 'master') {
+    if (BRANCH_NAME != "master") {
       stage("Deploy Development") {
         container("builder") {
           def NAMESPACE = "development"
@@ -96,18 +96,18 @@ podTemplate(label: label, containers: [
         }
       }
     }
-    if (BRANCH_NAME == 'master') {
-      // stage("Build Image") {
-        parallel("Build Image") {
-          stage("Build Docker") {
+    if (BRANCH_NAME == "master") {
+      stage("Build Image") {
+        parallel(
+          "Build Docker": {
             container("docker") {
               sh """
                 docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
                 docker push $REGISTRY/$IMAGE_NAME:$VERSION
               """
             }
-          }
-          stage("Build Charts") {
+          },
+          "Build Charts": {
             container("builder") {
               sh """
                 bash /root/extra/helm-init.sh
@@ -119,8 +119,8 @@ podTemplate(label: label, containers: [
               """
             }
           }
-        }
-      // }
+        )
+      }
       stage("Staging") {
         container("builder") {
           def NAMESPACE = "staging"
@@ -132,10 +132,10 @@ podTemplate(label: label, containers: [
           """
         }
       }
-      stage('Proceed') {
+      stage("Proceed") {
         container("builder") {
           notify("#439FE0", "Proceed Production?: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
-          timeout(time: 60, unit: 'MINUTES') {
+          timeout(time: 60, unit: "MINUTES") {
             input(message: "Proceed Production?: $IMAGE_NAME-$VERSION")
           }
         }
