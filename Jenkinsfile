@@ -1,7 +1,7 @@
-def REPOSITORY_URL = "https://github.com/nalbam/sample-web"
+def REPOSITORY_URL = "git@github.com:nalbam/sample-web.git"
 def REPOSITORY_SECRET = ""
 def IMAGE_NAME = "sample-web"
-def SLACK_TOKEN = "T03FUG4UB/B8RQJGNR0/U7LtWJKf8E2gVkh1S1oASlG5"
+def SLACK_TOKEN = ""
 
 def label = "worker-${UUID.randomUUID().toString()}"
 def VERSION = ""
@@ -28,7 +28,7 @@ podTemplate(label: label, containers: [
     stage("Prepare") {
       container("builder") {
         sh """
-          /root/extra/prepare.sh $IMAGE_NAME $BRANCH_NAME
+          toaster detect domain --namespace=devops
         """
         BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
         REGISTRY = readFile "/home/jenkins/REGISTRY"
@@ -49,7 +49,7 @@ podTemplate(label: label, containers: [
           throw e
         }
         sh """
-          /root/extra/detect.sh $IMAGE_NAME $BRANCH_NAME
+          toaster detect source --name=$IMAGE_NAME --branch=$BRANCH_NAME
         """
         VERSION = readFile "/home/jenkins/VERSION"
         SOURCE_LANG = readFile "/home/jenkins/SOURCE_LANG"
@@ -96,7 +96,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           def NAMESPACE = "development"
           sh """
-            /root/extra/draft-up.sh $NAMESPACE
+            toaster draft up --namespace=$NAMESPACE
           """
           deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
@@ -116,7 +116,7 @@ podTemplate(label: label, containers: [
           "Build Charts": {
             container("builder") {
               sh """
-                /root/extra/build-charts.sh
+                toaster build chart
               """
             }
           }
@@ -126,7 +126,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           def NAMESPACE = "staging"
           sh """
-            /root/extra/deploy.sh $IMAGE_NAME $VERSION $NAMESPACE
+            toaster helm deploy --namespace=$NAMESPACE
           """
           deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
@@ -144,7 +144,7 @@ podTemplate(label: label, containers: [
         container("builder") {
           def NAMESPACE = "production"
           sh """
-            /root/extra/deploy.sh $IMAGE_NAME $VERSION $NAMESPACE
+            toaster helm deploy --namespace=$NAMESPACE
           """
           deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
