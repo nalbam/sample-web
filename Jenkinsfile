@@ -1,145 +1,142 @@
-def REPOSITORY_URL = "https://github.com/nalbam/sample-web"
+def REPOSITORY_URL = "git@github.com:nalbam/sample-web.git"
 def REPOSITORY_SECRET = ""
 def IMAGE_NAME = "sample-web"
-def SLACK_TOKEN = "T03FUG4UB/B8RQJGNR0/U7LtWJKf8E2gVkh1S1oASlG5"
+def SLACK_TOKEN = ""
 
 def label = "worker-${UUID.randomUUID().toString()}"
 def VERSION = ""
 def SOURCE_LANG = ""
 def SOURCE_ROOT = ""
 def BASE_DOMAIN = ""
-def JENKINS = ""
 def REGISTRY = ""
+def JENKINS = ""
 def PIPELINE = ""
 properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
 podTemplate(label: label, containers: [
-  containerTemplate(name: "builder", image: "quay.io/nalbam/builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
-  containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true, alwaysPullImage: true),
-  containerTemplate(name: "maven", image: "maven", command: "cat", ttyEnabled: true, alwaysPullImage: true),
-  containerTemplate(name: "node", image: "node", command: "cat", ttyEnabled: true, alwaysPullImage: true)
+  containerTemplate(name: "builder", image: "quay.io/opspresso/builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
+  containerTemplate(name: "docker", image: "docker", command: "cat", ttyEnabled: true),
+  containerTemplate(name: "maven", image: "maven", command: "cat", ttyEnabled: true),
+  containerTemplate(name: "node", image: "node", command: "cat", ttyEnabled: true)
 ], volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
   hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
   hostPathVolume(mountPath: "/home/jenkins/.helm", hostPath: "/home/jenkins/.helm")
 ]) {
   node(label) {
-    stage("Checkout") {
-      if (REPOSITORY_SECRET) {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME", credentialsId: "$REPOSITORY_SECRET")
-      } else {
-        git(url: "$REPOSITORY_URL", branch: "$BRANCH_NAME")
-      }
-    }
     stage("Prepare") {
       container("builder") {
         sh """
-          bash /root/extra/build-init.sh $IMAGE_NAME $BRANCH_NAME
+          toaster scan domain --namespace=devops
+        """
+        BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
+        REGISTRY = readFile "/home/jenkins/REGISTRY"
+        JENKINS = readFile "/home/jenkins/JENKINS"
+        PIPELINE = "https://$JENKINS/blue/organizations/jenkins/$JOB_NAME/detail/$JOB_NAME/$BUILD_NUMBER/pipeline"
+      }
+    }
+    stage("Checkout") {
+      container("builder") {
+        try {
+          if (REPOSITORY_SECRET) {
+            git(url: REPOSITORY_URL, branch: BRANCH_NAME, credentialsId: REPOSITORY_SECRET)
+          } else {
+            git(url: REPOSITORY_URL, branch: BRANCH_NAME)
+          }
+        } catch (e) {
+          checkout_failure(IMAGE_NAME, PIPELINE)
+          throw e
+        }
+        sh """
+          toaster scan source --name=$IMAGE_NAME --branch=$BRANCH_NAME
         """
         VERSION = readFile "/home/jenkins/VERSION"
         SOURCE_LANG = readFile "/home/jenkins/SOURCE_LANG"
         SOURCE_ROOT = readFile "/home/jenkins/SOURCE_ROOT"
-        BASE_DOMAIN = readFile "/home/jenkins/BASE_DOMAIN"
-        JENKINS = readFile "/home/jenkins/JENKINS"
-        REGISTRY = readFile "/home/jenkins/REGISTRY"
-        PIPELINE = "https://$JENKINS/blue/organizations/jenkins/$JOB_NAME/detail/$JOB_NAME/$BUILD_NUMBER/pipeline"
-        if (SOURCE_LANG == 'java') {
-          def NEXUS = readFile "/home/jenkins/NEXUS"
-          if (NEXUS) {
-            def NEXUS_PUBLIC = "https://$NEXUS/repository/maven-public/"
-            sh "sed -i 's|<!-- ### configured mirrors ### -->|<mirror><id>mirror</id><url>$NEXUS_PUBLIC</url><mirrorOf>*</mirrorOf></mirror>|' .m2/settings.xml"
+      }
+    }
+    stage("Build") {
+      if (SOURCE_LANG == "java") {
+        container("maven") {
+          try {
+            sh """
+              cd $SOURCE_ROOT
+              mvn package -s /home/jenkins/settings.xml
+            """
+            build_success(IMAGE_NAME, VERSION, PIPELINE)
+          } catch (e) {
+            build_failure(IMAGE_NAME, PIPELINE)
+            throw e
           }
         }
-        sh """
-          sed -i -e "s/name: .*/name: $IMAGE_NAME/" charts/acme/Chart.yaml
-          sed -i -e "s/version: .*/version: $VERSION/" charts/acme/Chart.yaml
-          sed -i -e "s|basedomain: .*|basedomain: $BASE_DOMAIN|" charts/acme/values.yaml
-          sed -i -e "s|repository: .*|repository: $REGISTRY/$IMAGE_NAME|" charts/acme/values.yaml
-          sed -i -e "s|tag: .*|tag: $VERSION|" charts/acme/values.yaml
-          mv charts/acme charts/$IMAGE_NAME
-        """
       }
-    }
-    if (SOURCE_LANG == 'java') {
-      stage("Build") {
-        container("maven") {
-          sh """
-            cd $SOURCE_ROOT
-            mvn package -s .m2/settings.xml
-          """
-          notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
-        }
-      }
-    }
-    else if (SOURCE_LANG == 'nodejs') {
-      stage("Build") {
+      else if (SOURCE_LANG == "nodejs") {
         container("node") {
-          sh """
-            cd $SOURCE_ROOT
-            npm run build
-          """
-          notify("good", "Build Success: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
+          try {
+            sh """
+              cd $SOURCE_ROOT
+              npm run build
+            """
+            build_success(IMAGE_NAME, VERSION, PIPELINE)
+          } catch (e) {
+            build_failure(IMAGE_NAME, PIPELINE)
+            throw e
+          }
         }
       }
-    }
-    else {
-      stage("Build") {
+      else {
         sh """
           echo "skipped."
         """
       }
     }
-    if (BRANCH_NAME != 'master') {
-      stage("Deploy Development") {
+    if (BRANCH_NAME != "master") {
+      stage("Development") {
         container("builder") {
           def NAMESPACE = "development"
           sh """
-            bash /root/extra/draft-init.sh
-            sed -i -e "s/NAMESPACE/$NAMESPACE/g" draft.toml
-            sed -i -e "s/NAME/$IMAGE_NAME-$NAMESPACE/g" draft.toml
-            draft up --docker-debug
+            toaster draft up --namespace=$NAMESPACE
           """
+          deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
       }
     }
-    if (BRANCH_NAME == 'master') {
+    if (BRANCH_NAME == "master") {
       stage("Build Image") {
-        container("docker") {
-          sh """
-            docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
-            docker push $REGISTRY/$IMAGE_NAME:$VERSION
-          """
-        }
-      }
-      stage("Build Charts") {
-        container("builder") {
-          sh """
-            bash /root/extra/helm-init.sh
-            cd charts/$IMAGE_NAME
-            helm lint .
-            helm push . chartmuseum
-            helm repo update
-            helm search $IMAGE_NAME
-          """
-        }
+        parallel(
+          "Build Docker": {
+            container("docker") {
+              sh """
+                docker build -t $REGISTRY/$IMAGE_NAME:$VERSION .
+                docker push $REGISTRY/$IMAGE_NAME:$VERSION
+              """
+            }
+          },
+          "Build Charts": {
+            container("builder") {
+              sh """
+                toaster build chart
+              """
+            }
+          }
+        )
       }
       stage("Staging") {
         container("builder") {
           def NAMESPACE = "staging"
           sh """
-            helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                         --version $VERSION --namespace $NAMESPACE --devel \
-                         --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
-            helm history $IMAGE_NAME-$NAMESPACE
+            toaster helm deploy --namespace=$NAMESPACE
           """
+          deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
       }
-      stage('Proceed') {
+      stage("Confirm") {
         container("builder") {
-          notify("#439FE0", "Proceed Production?: $IMAGE_NAME-$VERSION <$PIPELINE|#$BUILD_NUMBER>")
-          timeout(time: 60, unit: 'MINUTES') {
-            input(message: "Proceed Production?: $IMAGE_NAME-$VERSION")
+          def NAMESPACE = "production"
+          deploy_confirm(IMAGE_NAME, VERSION, NAMESPACE, PIPELINE)
+          timeout(time: 60, unit: "MINUTES") {
+            input(message: "$IMAGE_NAME $VERSION to $NAMESPACE")
           }
         }
       }
@@ -147,20 +144,37 @@ podTemplate(label: label, containers: [
         container("builder") {
           def NAMESPACE = "production"
           sh """
-            helm upgrade --install $IMAGE_NAME-$NAMESPACE chartmuseum/$IMAGE_NAME \
-                         --version $VERSION --namespace $NAMESPACE --devel \
-                         --set fullnameOverride=$IMAGE_NAME-$NAMESPACE
-            helm history $IMAGE_NAME-$NAMESPACE
+            toaster helm deploy --namespace=$NAMESPACE
           """
+          deploy_success(IMAGE_NAME, VERSION, NAMESPACE, BASE_DOMAIN)
         }
       }
     }
   }
 }
-def notify(COLOR, MESSAGE) {
+def checkout_failure(IMAGE_NAME, PIPELINE) {
+  notify("danger", "Checkout Failure", "`$IMAGE_NAME`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def build_failure(IMAGE_NAME, PIPELINE) {
+  notify("danger", "Build Failure", "`$IMAGE_NAME`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def build_success(IMAGE_NAME, VERSION, PIPELINE) {
+  notify("good", "Build Success", "`$IMAGE_NAME` `$VERSION` :heavy_check_mark:", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def deploy_confirm(IMAGE_NAME, VERSION, STAGE, PIPELINE) {
+  notify("warning", "Deply Confirm", "`$IMAGE_NAME` `$VERSION` :rocket: `$STAGE`", "$env.JOB_NAME <$PIPELINE|#$env.BUILD_NUMBER>")
+}
+def deploy_success(IMAGE_NAME, VERSION, STAGE, BASE_DOMAIN) {
+  def SEE="https://$IMAGE_NAME-$STAGE.$BASE_DOMAIN"
+  notify("good", "Deply Success", "`$IMAGE_NAME` `$VERSION` :satellite: `$STAGE`", "see <$SEE|$env.IMAGE_NAME-$STAGE>")
+}
+def notify(COLOR, TITLE, MESSAGE, FOOTER) {
   try {
     if (SLACK_TOKEN) {
-      sh "curl -sL toast.sh/helper/slack.sh | bash -s -- --token=$SLACK_TOKEN --color=$COLOR '$MESSAGE'"
+      sh """
+        curl -sL toast.sh/helper/slack.sh | bash -s -- --token='$SLACK_TOKEN' \
+             --color='$COLOR' --title='$TITLE' --footer='$FOOTER' '$MESSAGE'
+      """
     }
   } catch (ignored) {
   }
