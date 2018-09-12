@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 image:
   repository: acme
   tag: latest
@@ -16,12 +16,13 @@ resources:
     memory: 128Mi
 ingress:
   enabled: true
-  basedomain: apps.opspresso.com
+  basedomain: opspresso.com
 hpa:
   enabled: true
-  min: 2
-  max: 30
+  min: 1
+  max: 5
   cpu: 50
+profile: default
 configmap:
   enabled: false
 secret:
