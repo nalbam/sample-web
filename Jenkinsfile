@@ -6,7 +6,7 @@ def BASE_DOMAIN = "dev.nalbam.com"
 def SLACK_TOKEN = ""
 
 @Library("github.com/opsnow-tools/valve-butler")
-def pump = new com.opsnow.valve.Butler()
+def butler = new com.opsnow.valve.Butler()
 def label = "worker-${UUID.randomUUID().toString()}"
 def VERSION = ""
 def SOURCE_LANG = ""
@@ -15,9 +15,7 @@ properties([
   buildDiscarder(logRotator(daysToKeepStr: "60", numToKeepStr: "30"))
 ])
 podTemplate(label: label, containers: [
-  containerTemplate(name: "builder", image: "quay.io/opsnow-tools/valve-builder", command: "cat", ttyEnabled: true, alwaysPullImage: true),
-  containerTemplate(name: "maven", image: "maven", command: "cat", ttyEnabled: true),
-  containerTemplate(name: "node", image: "node", command: "cat", ttyEnabled: true)
+  containerTemplate(name: "builder", image: "quay.io/opsnow-tools/valve-builder", command: "cat", ttyEnabled: true, alwaysPullImage: true)
 ], volumes: [
   hostPathVolume(mountPath: "/var/run/docker.sock", hostPath: "/var/run/docker.sock"),
   hostPathVolume(mountPath: "/home/jenkins/.draft", hostPath: "/home/jenkins/.draft"),
@@ -26,13 +24,13 @@ podTemplate(label: label, containers: [
   node(label) {
     stage("Prepare") {
       container("builder") {
-        pump.prepare()
+        butler.prepare()
 
         if (!BASE_DOMAIN) {
-          BASE_DOMAIN = pump.base_domain
+          BASE_DOMAIN = butler.base_domain
         }
         if (!SLACK_TOKEN) {
-          SLACK_TOKEN = pump.slack_token
+          SLACK_TOKEN = butler.slack_token
         }
       }
     }
@@ -49,17 +47,17 @@ podTemplate(label: label, containers: [
           throw e
         }
 
-        pump.scan(IMAGE_NAME, BRANCH_NAME, "web")
+        butler.scan(IMAGE_NAME, BRANCH_NAME, "web")
 
-        VERSION = pump.version
-        SOURCE_LANG = pump.source_lang
-        SOURCE_ROOT = pump.source_root
+        VERSION = butler.version
+        SOURCE_LANG = butler.source_lang
+        SOURCE_ROOT = butler.source_root
       }
     }
     // if (BRANCH_NAME != "master") {
     //   stage("Deploy PRE") {
     //     container("builder") {
-    //       pump.draft_up(IMAGE_NAME, "pre", CLUSTER, BASE_DOMAIN)
+    //       butler.draft_up(IMAGE_NAME, "pre", CLUSTER, BASE_DOMAIN)
     //       success(SLACK_TOKEN, "Deploy PRE", IMAGE_NAME, VERSION, "pre", BASE_DOMAIN)
     //     }
     //   }
@@ -69,19 +67,19 @@ podTemplate(label: label, containers: [
         parallel(
           "Build Docker": {
             container("builder") {
-              pump.build_image(IMAGE_NAME, VERSION)
+              butler.build_image(IMAGE_NAME, VERSION)
             }
           },
           "Build Charts": {
             container("builder") {
-              pump.build_chart(IMAGE_NAME, VERSION)
+              butler.build_chart(IMAGE_NAME, VERSION)
             }
           }
         )
       }
       stage("Deploy DEV") {
         container("builder") {
-          pump.helm_install(IMAGE_NAME, VERSION, "dev", BASE_DOMAIN, CLUSTER)
+          butler.helm_install(IMAGE_NAME, VERSION, "dev", BASE_DOMAIN, CLUSTER)
           success(SLACK_TOKEN, "Deploy DEV", IMAGE_NAME, VERSION, "dev", BASE_DOMAIN)
         }
       }
@@ -95,7 +93,7 @@ podTemplate(label: label, containers: [
       }
       stage("Deploy STAGE") {
         container("builder") {
-          pump.helm_install(IMAGE_NAME, VERSION, "stage", BASE_DOMAIN, CLUSTER)
+          butler.helm_install(IMAGE_NAME, VERSION, "stage", BASE_DOMAIN, CLUSTER)
           success(SLACK_TOKEN, "Deploy STAGE", IMAGE_NAME, VERSION, "stage", BASE_DOMAIN)
         }
       }
@@ -123,9 +121,9 @@ def proceed(token = "", type = "", name = "", version = "", namespace = "") {
 }
 def slack(token = "", color = "", title = "", message = "", footer = "") {
   try {
-    // pump.slack("$token", "$color", "$title", "$message", "$footer")
+    // butler.slack("$token", "$color", "$title", "$message", "$footer")
     sh """
-      curl -sL repo.opsnow.io/helper/slack.sh | bash -s -- --token='$token' \
+      curl -sL repo.opsnow.io/valve-ctl/slack | bash -s -- --token='$token' \
       --color='$color' --title='$title' --footer='$footer' '$message'
     """
   } catch (ignored) {
