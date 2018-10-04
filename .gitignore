@@ -14,13 +14,26 @@ $RECYCLE.BIN/
 # Mac
 .DS_Store
 
-# PHP
-composer.phar
-composer.lock
+# Java
+.project
+.classpath
+.factorypath
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
 
 # Maven
 target/
 build/
+bin/
+
+# Nodejs
+node_modules/
+package-lock.json
+dist/
 
 # JetBrains
 .idea/
@@ -29,7 +42,6 @@ build/
 # Eclipse
 .settings/
 .metadata/
-.project
 
 # Temp
 *.pid
