@@ -50,8 +50,8 @@ podTemplate(label: label, containers: [
         butler.scan(IMAGE_NAME, BRANCH_NAME, "web")
 
         VERSION = butler.version
-        SOURCE_LANG = butler.source_lang
-        SOURCE_ROOT = butler.source_root
+        // SOURCE_LANG = butler.source_lang
+        // SOURCE_ROOT = butler.source_root
       }
     }
     // if (BRANCH_NAME != "master") {
@@ -67,12 +67,22 @@ podTemplate(label: label, containers: [
         parallel(
           "Build Docker": {
             container("builder") {
-              butler.build_image(IMAGE_NAME, VERSION)
+              try {
+                butler.build_image(IMAGE_NAME, VERSION)
+              } catch (e) {
+                failure(SLACK_TOKEN, "Build Docker", IMAGE_NAME)
+                throw e
+              }
             }
           },
           "Build Charts": {
             container("builder") {
-              butler.build_chart(IMAGE_NAME, VERSION)
+              try {
+                butler.build_chart(IMAGE_NAME, VERSION)
+              } catch (e) {
+                failure(SLACK_TOKEN, "Build Charts", IMAGE_NAME)
+                throw e
+              }
             }
           }
         )
@@ -124,7 +134,8 @@ def slack(token = "", color = "", title = "", message = "", footer = "") {
     // butler.slack("$token", "$color", "$title", "$message", "$footer")
     sh """
       curl -sL repo.opsnow.io/valve-ctl/slack | bash -s -- --token='$token' \
-      --color='$color' --title='$title' --footer='$footer' '$message'
+        --footer='$footer' --footer_icon='https://jenkins.io/sites/default/files/jenkins_favicon.ico' \
+        --color='$color' --title='$title' '$message'
     """
   } catch (ignored) {
   }
