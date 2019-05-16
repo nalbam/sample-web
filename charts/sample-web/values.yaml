@@ -1,3 +1,5 @@
+fullnameOverride: sample-web
+
 replicaCount: 1
 
 profile: default
@@ -90,8 +92,16 @@ tolerations: []
 
 affinity: {}
 
+env: {}
+  # - name: MESSAGE
+  #   value: "hello world"
+
 configmap:
   enabled: false
+  data: {}
+    # MESSAGE: "hello world"
 
 secret:
   enabled: false
+  data: {}
+    # SECRET: c2VjcmV0IHdvcmxkCg==
