@@ -18,7 +18,7 @@ jobs:
       - persist_to_workspace:
           root: ~/works
           paths:
-            - target
+            - .
   publish:
     docker:
       - image: opspresso/awscli
@@ -29,6 +29,7 @@ jobs:
       - run:
           name: Publish
           command: |
+            ls -al
             bash ./target/builder.sh publish
   release:
     docker:
