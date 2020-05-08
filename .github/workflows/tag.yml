@@ -15,10 +15,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Run Build
-        run: |
-          ./build.sh
-
       # - name: Trigger for GitOps
       #   uses: opspresso/action-builder@master
       #   with:
