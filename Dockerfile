@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM nginx:1.13-alpine
+FROM nginx:1.30-alpine
 
 LABEL maintainer="me@nalbam.com" \
       org.opencontainers.image.description="A Sample Docker image for Nginx App" \
