@@ -8,6 +8,8 @@ permissions:
   contents: read
 
 # Releases share the latest image tag, so runs are serialized across tags.
+# cancel-in-progress: false protects only the running release. GitHub keeps one
+# pending run per group, so a newer tag cancels a waiting run; rerun that tag.
 concurrency:
   group: release-${{ github.workflow }}
   cancel-in-progress: false
