@@ -1,9 +1,9 @@
 # gitlab-ci
 
-image: docker:latest
+image: docker:29.9.2
 
 services:
-  - docker:dind
+  - docker:29.9.2-dind
 
 variables:
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
