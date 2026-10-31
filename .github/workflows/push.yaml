@@ -9,20 +9,31 @@ on:
     branches:
       - main
       - master
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           load: true
@@ -34,7 +45,7 @@ jobs:
 
       - name: Check index.html returns 200
         run: |
-          for i in $(seq 1 15); do
+          for _ in $(seq 1 15); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/index.html || true)
             [ "$code" = "200" ] && exit 0
             sleep 1
@@ -45,111 +56,3 @@ jobs:
 
       - name: Check favicon.ico returns 200
         run: curl -fsS -o /dev/null http://localhost:8080/favicon.ico
-
-  release:
-    # bump, release, GitOps dispatch and image push run on main push only.
-    if: github.event_name == 'push'
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Bump Version
-        id: bump
-        uses: opspresso/action-builder@master
-        with:
-          args: --version
-
-      - name: Release to GitHub
-        uses: opspresso/action-builder@master
-        with:
-          args: --release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ steps.bump.outputs.version }}
-
-      - name: Trigger for GitOps
-        uses: opspresso/action-builder@master
-        with:
-          args: --dispatch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
-          GITOPS_REPO: "opspresso/argocd-env-demo"
-          PROJECT: ${{ github.event.repository.name }}
-          VERSION: ${{ steps.bump.outputs.version }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
-          tags: |
-            type=semver,pattern={{raw}},value=${{ steps.bump.outputs.version }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          builder: ${{ steps.buildx.outputs.name }}
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      # - name: Build & Push to AWS ECR Public
-      #   uses: opspresso/action-docker@master
-      #   with:
-      #     args: --ecr
-      #   env:
-      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     AWS_REGION: "ap-northeast-2"
-      #     REGISTRY: "public.ecr.aws/nalbam"
-      #     # TAG_NAME: ${{ github.ref }}
-      #     # PLATFORM: "linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6"
-      #     BUILDX: "true"
-      #     # LATEST: "true"
-
-      # - name: Build & Push to Quay.io
-      #   uses: opspresso/action-docker@master
-      #   with:
-      #     args: --docker
-      #   env:
-      #     USERNAME: ${{ secrets.QUAY_USERNAME }}
-      #     PASSWORD: ${{ secrets.QUAY_PASSWORD }}
-      #     REGISTRY: "quay.io"
-      #     # TAG_NAME: ${{ github.ref }}
-      #     # PLATFORM: "linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6"
-      #     BUILDX: "true"
-      #     # LATEST: "true"
-
-      # - name: Build & Push to GitHub Package
-      #   uses: opspresso/action-docker@master
-      #   with:
-      #     args: --docker
-      #   env:
-      #     PASSWORD: ${{ secrets.GHP_TOKEN }}
-      #     REGISTRY: "docker.pkg.github.com"
-      #     # TAG_NAME: ${{ github.ref }}
-      #     # PLATFORM: "linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6"
-      #     # BUILDX: "true"
-      #     # LATEST: "true"

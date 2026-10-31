@@ -30,41 +30,6 @@ jobs:
           name: Publish
           command: |
             bash ./target/builder.sh
-  release:
-    docker:
-      - image: cimg/go:1.25
-    working_directory: ~/works
-    steps:
-      - attach_workspace:
-          at: ~/works
-      - run:
-          name: Release
-          command: |
-            bash ./target/builder.sh
-  docker:
-    docker:
-      - image: cimg/python:3.13
-    working_directory: ~/works
-    steps:
-      - attach_workspace:
-          at: ~/works
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: Docker
-          command: |
-            bash ./target/builder.sh
-  trigger:
-    docker:
-      - image: cimg/python:3.13
-    working_directory: ~/works
-    steps:
-      - attach_workspace:
-          at: ~/works
-      - run:
-          name: Trigger
-          command: |
-            bash ./target/builder.sh
   slack:
     docker:
       - image: cimg/python:3.13
@@ -94,15 +59,6 @@ workflows:
             branches:
               only:
                 - master
-      - release:
-          requires:
-            - build
-      - docker:
-          requires:
-            - release
-      - trigger:
-          requires:
-            - release
       # - slack:
       #     requires:
-      #       - release
+      #       - build
