@@ -19,7 +19,7 @@ Requirements: Docker, `curl`, `openssl`, and network access to the CDNs below. R
 
 ```bash
 docker build --pull -t sample-web .
-docker run --rm sample-web nginx -v
+docker run --rm --entrypoint nginx sample-web -v
 docker run -d --name sample-web -p 8080:80 sample-web
 test/smoke.sh http://localhost:8080
 docker rm -f sample-web

@@ -55,7 +55,7 @@ jobs:
 
       - name: Check Nginx version
         run: |
-          version="$(docker run --rm sample-web:test nginx -v 2>&1)"
+          version="$(docker run --rm --entrypoint nginx sample-web:test -v 2>&1)"
           echo "$version"
           [[ "$version" == "nginx version: nginx/1.30."* ]]
 
