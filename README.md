@@ -95,3 +95,4 @@ docker rm -f sample-web-release
 `gh run view --exit-status` exits with a non-zero status unless the run succeeded. `imagetools inspect` must list `linux/amd64` and `linux/arm64`. `test/smoke.sh` compares the image content with `src/` of the checked-out tag.
 
 The legacy `.circleci/config.yml` keeps only its `build` and `publish` jobs; it no longer runs a release, Docker, or trigger job. It cannot run as written: it downloads `toast.sh/builder`, which returned HTTP 404 on 2026-10-31, and `publish` runs only on a `master` branch, which this repository does not have. No recent commit has a CircleCI status. The legacy `.gitlab-ci.yml` pins `docker:29.9.2` and `docker:29.9.2-dind` and pushes to the GitLab project registry; it is not run from this GitHub repository.
+Managed by rovr.
