@@ -33,7 +33,13 @@ docker rm -f sample-web
 
 The `build` workflow (`.github/workflows/push.yaml`) builds the image for `linux/amd64` and `linux/arm64` with `--pull`, checks that the image runs Nginx 1.30.x, starts the container, and runs `test/smoke.sh`. It always prints the container logs and removes the container. It runs on pull requests and pushes to `main` or `master`, and the release workflow calls it. It only reads the repository, uses no secrets, and publishes nothing.
 
-To check the page in a browser, open `http://localhost:8080/` at desktop width and at a phone width such as 375 px. The logo, `sample-web` heading, and both buttons with their icons must show. The browser console shows only the `counter.js` error described below.
+The page shows a yellow five-pointed star between the logo and the `sample-web` heading. The star is an inline SVG in `src/index.html` (`viewBox="0 0 24 24"`, 48 × 48 px, `fill="#ffc107"`, `stroke="#e0a800"`). It needs no image, CDN CSS, Font Awesome, or JavaScript, so it shows even when the external hosts are blocked. It is decorative and has `aria-hidden="true"` and `focusable="false"`, so screen readers and keyboard navigation skip it.
+
+To check the page in a browser, open `http://localhost:8080/` at desktop width and at a phone width such as 375 px. Check that:
+
+- The logo, the yellow star, the `sample-web` heading, and both buttons with their icons show, centered in that order.
+- The star does not overlap the logo or the heading, and the page does not scroll horizontally. The logo has the Bootstrap `img-fluid` class, so it shrinks to fit narrow screens.
+- The browser console shows only the `counter.js` error described below.
 
 ### Versions
 
