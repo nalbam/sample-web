@@ -1,7 +1,7 @@
 apiVersion: agent.opspresso.com/v1
 kind: Application
 spec:
-  name: sample-web
+  name: sample-web-2
   repository: nalbam/sample-web
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
   description: Nginx static sample web
