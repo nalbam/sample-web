@@ -59,11 +59,17 @@ jobs:
           echo "$version"
           [[ "$version" == "nginx version: nginx/1.30."* ]]
 
+      - name: Runtime test
+        run: docker run --rm -v "$PWD:/src:ro" -w /src nginx:1.30-alpine sh test/runtime.sh
+
       - name: Run container
-        run: docker run -d --name sample-web -p 8080:80 sample-web:test
+        run: docker run -d --name sample-web --cap-drop ALL -p 8080:8080 sample-web:test
 
       - name: Smoke test
         run: test/smoke.sh http://localhost:8080
+
+      - name: Health check
+        run: test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8080/health)" = 200
 
       - name: Container logs and cleanup
         if: always()
