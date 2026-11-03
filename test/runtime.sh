@@ -74,9 +74,10 @@ grep -q 'try_files \$uri \$uri/ =404;' "$conf" && ok "nginx variables left intac
 
 # Point the image paths at the temp dir.
 sed -i "s#/usr/share/nginx/html#$tmp/html#g" "$conf"
-sed -e "s#/etc/nginx/conf.d/#$tmp/conf.d/#g" \
+# Replace /tmp/ first so the $tmp paths inserted below are not rewritten again.
+sed -e "s#/tmp/#$tmp/#g" \
+    -e "s#/etc/nginx/conf.d/#$tmp/conf.d/#g" \
     -e "s#/var/log/nginx/#$tmp/logs/#g" \
-    -e "s#/tmp/#$tmp/#g" \
     "$root/nginx/nginx.conf" >"$tmp/nginx.conf"
 
 # --- Start Nginx as a non-root user ----------------------------------------
