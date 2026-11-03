@@ -83,13 +83,17 @@ sed -e "s#/tmp/#$tmp/#g" \
 # --- Start Nginx as a non-root user ----------------------------------------
 
 # As root, drop to the nginx user (uid 101) like the image does. If the test
-# container lacks the capabilities for that, run as the current user.
+# container lacks the capabilities for that (CAP_SETUID/SETGID/CHOWN), run as
+# root in single-process mode with "user root;" in this test-only config, so
+# Nginx neither chowns its temp dirs to uid 101 nor calls setgid/setuid.
 use_su=0
 if [ "$(id -u)" = "0" ]; then
-  if chown -R nginx:nginx "$tmp" 2>/dev/null && su -s /bin/sh nginx -c true 2>/dev/null; then
+  if su -s /bin/sh nginx -c true 2>/dev/null && chown -R nginx:nginx "$tmp" 2>/dev/null; then
     use_su=1
   else
-    echo "note: cannot switch to the nginx user, running as root"
+    echo "note: cannot switch to the nginx user, running as root with 'user root; master_process off;' (test config only)"
+    { printf 'user root;\nmaster_process off;\n'; cat "$tmp/nginx.conf"; } >"$tmp/nginx.conf.new"
+    mv "$tmp/nginx.conf.new" "$tmp/nginx.conf"
   fi
 fi
 
