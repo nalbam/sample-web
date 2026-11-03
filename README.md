@@ -9,7 +9,7 @@
 
 ```bash
 docker pull ghcr.io/nalbam/sample-web
-docker run -d --name sample-web -p 8080:80 ghcr.io/nalbam/sample-web
+docker run -d --name sample-web -p 8080:8080 ghcr.io/nalbam/sample-web
 curl -I http://localhost:8080/index.html
 ```
 
@@ -20,9 +20,23 @@ Requirements: Docker, `curl`, `openssl`, and network access to the CDNs below. R
 ```bash
 docker build --pull -t sample-web .
 docker run --rm --entrypoint nginx sample-web -v
-docker run -d --name sample-web -p 8080:80 sample-web
+docker run -d --name sample-web -p 8080:8080 sample-web
 test/smoke.sh http://localhost:8080
 docker rm -f sample-web
+```
+
+The image listens on the port in `PORT` (default `8080`), runs as the unprivileged `nginx` user (uid 101) and needs no Linux capabilities, so it works with `--cap-drop ALL`. `GET /health` returns HTTP 200 with `ok`; the app has no database or other dependencies to check.
+
+```bash
+docker run -d --name sample-web --user 101 --cap-drop ALL -e PORT=9090 -p 9090:9090 sample-web
+curl -i http://localhost:9090/health
+docker rm -f sample-web
+```
+
+`test/runtime.sh` is an offline test that needs no Docker build or network. It runs in the `nginx:1.30-alpine` image, renders `nginx/templates` with the image's envsubst entrypoint script and a non-default `PORT`, starts Nginx from `nginx/nginx.conf` as the `nginx` user, and checks `/health`, `/`, `/index.html`, `/favicon.ico` and a 404:
+
+```bash
+docker run --rm -v "$PWD:/src:ro" -w /src nginx:1.30-alpine sh test/runtime.sh
 ```
 
 `test/smoke.sh` is the test for this static site. It exits with a non-zero status and prints `FAIL:` lines if a check fails. It checks that:
@@ -93,7 +107,7 @@ gh run view "$run_id" --exit-status
 gh release view "$tag"
 docker buildx imagetools inspect "ghcr.io/nalbam/sample-web:$tag"
 git switch --detach "$tag"
-docker run -d --name sample-web-release -p 8080:80 "ghcr.io/nalbam/sample-web:$tag"
+docker run -d --name sample-web-release -p 8080:8080 "ghcr.io/nalbam/sample-web:$tag"
 test/smoke.sh http://localhost:8080
 docker rm -f sample-web-release
 ```
