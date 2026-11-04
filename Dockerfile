@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # build: runs the tests on the build platform and writes the site to /out.
-FROM --platform=$BUILDPLATFORM nginx:1.30-alpine AS build
+FROM --platform=$BUILDPLATFORM nginx:1.31-alpine AS build
 RUN apk add --no-cache bash openssl
 WORKDIR /src
 COPY nginx nginx
@@ -13,7 +13,7 @@ RUN sh test/runtime.sh && bash test/content.sh && cp -R src /out
 FROM scratch AS artifact
 COPY --from=build /out /
 
-FROM nginx:1.30-alpine
+FROM nginx:1.31-alpine
 
 LABEL org.opencontainers.image.title="sample-web" \
       org.opencontainers.image.description="A sample static site on Nginx" \
