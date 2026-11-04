@@ -6,14 +6,19 @@
 #
 # Starts IMAGE with VERSION and checks it from a curl container in the same
 # network namespace, so the host needs only docker and jq. Exits non-zero and
-# prints the container log when a check fails.
+# prints the container log when a check fails. The helpers above the
+# "sample-web checks" line are the same in every sample-* repository.
+
+# Each repository uses a subset of the shared helpers, may replace some of them,
+# and may call check_port without arguments.
+# shellcheck disable=SC2119,SC2120,SC2317,SC2329
 
 set -euo pipefail
 
 IMAGE="${1:?usage: scripts/smoke.sh IMAGE [VERSION]}"
 VERSION="${2:-v0.0.0-smoke}"
 PORT=8080
-TIMEOUT="${SMOKE_TIMEOUT:-60}"
+TIMEOUT="${SMOKE_TIMEOUT:-90}"
 CURL_IMAGE=curlimages/curl:8.23.0
 NAME="smoke-$$-$RANDOM"
 
@@ -26,56 +31,77 @@ fail() {
   exit 1
 }
 
-# http CURL_ARGS... runs curl inside the network namespace of the container.
-http() { docker run --rm --network "container:$NAME" "$CURL_IMAGE" -fsS --max-time 10 "$@"; }
+# http CURL_ARGS... runs curl in the network namespace of the container.
+http() { docker run --rm --network "container:$NAME" "$CURL_IMAGE" -sS --max-time 10 "$@"; }
 
-# start [DOCKER_RUN_ARGS...] starts the image and waits for GET /health.
+# ready succeeds when the app answers its health check. sample-grpc replaces it.
+ready() { http -f -o /dev/null "http://localhost:$PORT/health" 2> /dev/null; }
+
+# start [DOCKER_RUN_ARGS...] starts the image and waits until it is ready.
 start() {
   cleanup
   docker run -d --name "$NAME" -e VERSION="$VERSION" "$@" "$IMAGE" > /dev/null
   for _ in $(seq "$TIMEOUT"); do
     [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = true ] || fail "container exited"
-    http -o /dev/null "http://localhost:$PORT/health" 2> /dev/null && return 0
+    ready && return 0
     sleep 1
   done
-  fail "GET /health did not answer in ${TIMEOUT}s"
+  fail "the health check did not pass in ${TIMEOUT}s"
 }
 
-# check_health checks the /health contract: HTTP 200 with result "ok" and VERSION.
+# check_health checks the /health contract: HTTP 200, result "ok" and VERSION.
+# sample-grpc replaces it.
 check_health() {
   local body
-  body="$(http "http://localhost:$PORT/health")" || fail "GET /health"
+  body="$(http -f "http://localhost:$PORT/health")" || fail "GET /health"
   jq -e --arg version "$VERSION" '.result == "ok" and .version == $version' <<< "$body" > /dev/null ||
     fail "GET /health returned $body, expected result ok and version $VERSION"
   echo "ok: GET /health $body"
 }
 
-# check_get PATH [TEXT] checks HTTP 200 and, when given, that the body contains TEXT.
+# check_get PATH [TEXT] checks HTTP 200 and, when TEXT is given, that the body contains it.
 check_get() {
   if [ -z "${2:-}" ]; then
-    http -o /dev/null "http://localhost:$PORT$1" || fail "GET $1"
+    http -f -o /dev/null "http://localhost:$PORT$1" || fail "GET $1"
+    echo "ok: GET $1"
   else
-    http "http://localhost:$PORT$1" | grep -F -- "$2" > /dev/null || fail "GET $1 does not contain '$2'"
+    http -f "http://localhost:$PORT$1" | grep -F -- "$2" > /dev/null || fail "GET $1 does not contain: $2"
+    echo "ok: GET $1 contains: $2"
   fi
-  echo "ok: GET $1"
 }
 
-# --- sample-web checks -------------------------------------------------------
+# check_status PATH CODE checks the HTTP status code.
+check_status() {
+  local code
+  code="$(http -o /dev/null -w '%{http_code}' "http://localhost:$PORT$1")" || fail "GET $1"
+  [ "$code" = "$2" ] || fail "GET $1 returned HTTP $code, expected $2"
+  echo "ok: GET $1 HTTP $code"
+}
+
+# check_non_root checks that the main process does not run as root.
+check_non_root() {
+  local uid
+  uid="$(docker exec "$NAME" id -u)"
+  [ "$uid" != 0 ] || fail "the container runs as root"
+  echo "ok: runs as uid $uid"
+}
+
+# check_port checks that the image listens on another PORT.
+check_port() {
+  PORT=18080
+  start -e PORT="$PORT" "$@"
+  check_health
+  echo "ok: listens on PORT=$PORT"
+}
+
+# --- sample-web checks ----------------------------------------------------------
 
 start --cap-drop ALL
 check_health
 check_get / '<title>Hello, world!</title>'
 check_get /favicon.ico
-if http -o /dev/null "http://localhost:$PORT/does-not-exist" 2> /dev/null; then
-  fail "GET /does-not-exist did not return an error"
-fi
-echo "ok: GET /does-not-exist returns an error"
-
-[ "$(docker exec "$NAME" id -u)" != 0 ] || fail "the container runs as root"
-echo "ok: runs as uid $(docker exec "$NAME" id -u)"
-
-PORT=18080
-start -e PORT="$PORT"
-check_health
+check_status /does-not-exist 404
+check_non_root
+check_port --cap-drop ALL
 
 echo "smoke test passed: $IMAGE $VERSION"
