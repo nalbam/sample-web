@@ -1,0 +1,21 @@
+---
+apiVersion: agent.opspresso.com/v1
+kind: Application
+spec:
+  name: sample-web-4
+  repository: nalbam/sample-web
+  owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
+  description: Nginx static sample web
+runtime:
+  port: 8080
+  health: /health
+  build:
+    context: .
+    dockerfile: Dockerfile
+  test:
+    image: nginx:1.31-alpine
+    command: sh test/runtime.sh
+environments:
+  dev: {}
+  prod: {}
+---
