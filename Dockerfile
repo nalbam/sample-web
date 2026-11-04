@@ -1,29 +1,41 @@
-# Dockerfile
+# syntax=docker/dockerfile:1
+
+# build: runs the tests on the build platform and writes the site to /out.
+FROM --platform=$BUILDPLATFORM nginx:1.30-alpine AS build
+RUN apk add --no-cache bash openssl
+WORKDIR /src
+COPY nginx nginx
+COPY src src
+COPY test test
+RUN sh test/runtime.sh && bash test/content.sh && cp -R src /out
+
+# artifact: the release artifact, exported by scripts/release.sh artifact.
+FROM scratch AS artifact
+COPY --from=build /out /
 
 FROM nginx:1.30-alpine
 
-LABEL maintainer="me@nalbam.com" \
-      org.opencontainers.image.description="A Sample Docker image for Nginx App" \
-      org.opencontainers.image.authors="Jungyoul Yu, me@nalbam.com, https://www.nalbam.com/" \
-      org.opencontainers.image.source="https://github.com/nalbam/sample-web" \
-      org.opencontainers.image.title="sample-web"
+LABEL org.opencontainers.image.title="sample-web" \
+      org.opencontainers.image.description="A sample static site on Nginx" \
+      org.opencontainers.image.source="https://github.com/nalbam/sample-web"
 
-# RUN apk add --no-cache bash curl
+ARG VERSION=v0.0.0-dev
 
-# The entrypoint renders /etc/nginx/templates/*.template into /etc/nginx/conf.d,
-# substituting only PORT.
+# The image entrypoint renders /etc/nginx/templates/*.template into
+# /etc/nginx/conf.d and substitutes only PORT and VERSION.
 ENV PORT=8080 \
-    NGINX_ENVSUBST_FILTER="^PORT\$"
+    VERSION=${VERSION} \
+    NGINX_ENVSUBST_FILTER="^(PORT|VERSION)$"
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/templates /etc/nginx/templates
 
-# Let the unprivileged nginx user (uid 101) write the rendered config.
+# The unprivileged nginx user (uid 101) writes the rendered config.
 RUN rm -f /etc/nginx/conf.d/default.conf \
  && chown -R 101:101 /etc/nginx/conf.d
 
-COPY src /usr/share/nginx/html
-
-EXPOSE 8080
+COPY --from=artifact / /usr/share/nginx/html/
 
 USER 101
+
+EXPOSE 8080
