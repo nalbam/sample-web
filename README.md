@@ -18,7 +18,7 @@ The image runs as the unprivileged `nginx` user (uid 101) and needs no Linux cap
 | Environment variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `8080` | Listen port. |
-| `VERSION` | image tag | Version that `/health` reports. |
+| `VERSION` | `v0.0.0-dev` | Version that `/health` reports. Release images set it to their tag; a local build sets it with `--build-arg VERSION=...`. |
 
 | Path | Response |
 | --- | --- |
