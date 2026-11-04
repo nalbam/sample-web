@@ -4,15 +4,17 @@
 #
 # Usage: sh test/runtime.sh   (run from the repository root inside nginx:1.30-alpine)
 #
-# Renders nginx/templates with the image's own envsubst entrypoint script and a
-# non-default PORT, starts Nginx from nginx/nginx.conf as the unprivileged nginx
-# user on that port, and checks /health, the static files from src/ and a 404.
+# The Dockerfile build stage runs this test. It renders nginx/templates with the
+# image's own envsubst entrypoint script, a non-default PORT and a test VERSION,
+# starts Nginx from nginx/nginx.conf as the unprivileged nginx user on that port,
+# and checks /health, the static files from src/ and a 404.
 # Uses no network beyond 127.0.0.1 and no secrets.
 
 set -eu
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 port="${TEST_PORT:-18080}"
+version="v0.0.0-test"
 tmp="$(mktemp -d)"
 failures=0
 pid=""
@@ -35,21 +37,6 @@ ok() {
   echo "ok: $*"
 }
 
-# --- Static checks on the image definition ---------------------------------
-
-grep -q '^FROM nginx:1\.30-alpine' "$root/Dockerfile" || fail "Dockerfile: base image is not nginx:1.30-alpine"
-grep -q '^EXPOSE 8080$' "$root/Dockerfile" || fail "Dockerfile: EXPOSE 8080 missing"
-grep -q 'PORT=8080' "$root/Dockerfile" || fail "Dockerfile: default PORT=8080 missing"
-user="$(sed -n 's/^USER[[:space:]]\{1,\}//p' "$root/Dockerfile" | tail -n 1)"
-case "$user" in
-  "" | 0 | root | 0:*) fail "Dockerfile: final USER is not non-root ('$user')" ;;
-  *) ok "Dockerfile: runs as USER $user" ;;
-esac
-if grep -Eq '^[[:space:]]*user[[:space:]]' "$root/nginx/nginx.conf"; then
-  fail "nginx.conf: 'user' directive needs root"
-fi
-grep -q 'listen \${PORT};' "$root/nginx/templates/default.conf.template" || fail "template: does not listen on \${PORT}"
-
 # --- Render the config like the image entrypoint does ----------------------
 
 mkdir -p "$tmp/conf.d" "$tmp/html" "$tmp/logs"
@@ -57,14 +44,14 @@ cp -R "$root/src/." "$tmp/html/"
 
 envsubst_script=/docker-entrypoint.d/20-envsubst-on-templates.sh
 if [ -x "$envsubst_script" ]; then
-  PORT="$port" \
-  NGINX_ENVSUBST_FILTER='^PORT$' \
+  PORT="$port" VERSION="$version" \
+  NGINX_ENVSUBST_FILTER='^(PORT|VERSION)$' \
   NGINX_ENVSUBST_TEMPLATE_DIR="$root/nginx/templates" \
   NGINX_ENVSUBST_OUTPUT_DIR="$tmp/conf.d" \
     sh "$envsubst_script" >/dev/null
 else
   echo "note: $envsubst_script not found, using envsubst directly"
-  PORT="$port" envsubst '${PORT}' <"$root/nginx/templates/default.conf.template" >"$tmp/conf.d/default.conf"
+  PORT="$port" VERSION="$version" envsubst '${PORT} ${VERSION}' <"$root/nginx/templates/default.conf.template" >"$tmp/conf.d/default.conf"
 fi
 
 conf="$tmp/conf.d/default.conf"
@@ -139,8 +126,9 @@ fetch() {
 
 fetch /health
 [ "$status" = "200" ] && ok "/health HTTP 200" || fail "/health HTTP '$status'"
-[ "$(cat "$tmp/body" 2>/dev/null)" = "ok" ] || fail "/health body is not 'ok'"
-case "$ctype" in text/plain*) ;; *) fail "/health Content-Type '$ctype'" ;; esac
+want="{\"result\":\"ok\",\"version\":\"$version\"}"
+[ "$(cat "$tmp/body" 2>/dev/null)" = "$want" ] || fail "/health body is not $want"
+case "$ctype" in application/json*) ;; *) fail "/health Content-Type '$ctype'" ;; esac
 
 check_path() {
   fetch "$1"

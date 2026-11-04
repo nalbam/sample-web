@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
 #
-# HTTP smoke test for a running sample-web server.
+# Content test for src/index.html. The Dockerfile build stage runs it.
 #
-# Usage: test/smoke.sh [BASE_URL]   (default: http://localhost:8080)
+# Usage: bash test/content.sh   (run from the repository root; needs curl and openssl)
 #
-# Checks that /, /index.html and /favicon.ico are served from src/, that the
-# page keeps its content and Bootstrap 5 / Font Awesome 7 markup, and that every
-# pinned CDN asset downloads and matches its integrity hash. The remote
-# counter.js is a known external dependency outside this repository: its status
-# is reported but does not fail the test.
+# Checks that the page keeps its content and Bootstrap 5 / Font Awesome 7
+# markup, and that every pinned CDN asset downloads and matches its integrity
+# hash. The remote counter.js is a known external dependency outside this
+# repository: its status is reported but does not fail the test.
 
 set -euo pipefail
 
-base="${1:-http://localhost:8080}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -24,29 +22,6 @@ fail() {
   echo "FAIL: $*"
   failures=$((failures + 1))
 }
-
-# Wait up to 15 seconds for the server.
-for _ in $(seq 1 15); do
-  curl -fsS -o /dev/null "$base/" 2>/dev/null && break
-  sleep 1
-done
-
-# Each path must return 200 with the expected type and the file from src/.
-check_path() {
-  local path="$1" file="$2" type="$3" out="$tmp/body" code ctype
-  if ! read -r code ctype < <(curl -sS -o "$out" -w '%{http_code} %{content_type}\n' "$base$path"); then
-    fail "$path: request failed"
-    return
-  fi
-  [ "$code" = "200" ] || { fail "$path: HTTP $code"; return; }
-  [[ "$ctype" == "$type"* ]] || fail "$path: Content-Type '$ctype', expected '$type'"
-  cmp -s "$out" "$root/src/$file" || fail "$path: body differs from src/$file"
-  echo "ok: $path HTTP $code $ctype"
-}
-
-check_path / index.html text/html
-check_path /index.html index.html text/html
-check_path /favicon.ico favicon.ico image/x-icon
 
 html="$(tr '\n' ' ' < "$root/src/index.html")"
 
