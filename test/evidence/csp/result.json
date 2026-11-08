@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-08T02:45:30.185Z",
+  "chromium": "chromium",
+  "headers": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' https://code.jquery.com https://nalbam.com; style-src 'self' https://cdn.jsdelivr.net https://use.fontawesome.com; font-src https://use.fontawesome.com; img-src 'self' https://nalbam.com data:; connect-src 'self' https://nalbam.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  },
+  "checks": {
+    "page HTTP 200 with the template CSP": true,
+    "no securitypolicyviolation events": true,
+    "no CSP console messages": true,
+    "Bootstrap .btn-primary background is rgb(13, 110, 253)": true,
+    "Font Awesome font on .fa-thumbs-up::before": true,
+    "Font Awesome woff2 HTTP 200": true,
+    "logo loaded (naturalWidth > 0)": true,
+    "jQuery loaded": true,
+    "/favicon.ico HTTP 200": true
+  },
+  "state": {
+    "violations": [],
+    "bootstrapPrimaryBackground": "rgb(13, 110, 253)",
+    "thumbsUpBeforeFontFamily": "\"Font Awesome 7 Free\"",
+    "thumbsUpBeforeContent": "\"\" / \"\"",
+    "fontAwesomeFonts": [
+      {
+        "family": "Font Awesome 7 Brands",
+        "weight": "400",
+        "status": "unloaded"
+      },
+      {
+        "family": "Font Awesome 7 Free",
+        "weight": "400",
+        "status": "loaded"
+      },
+      {
+        "family": "Font Awesome 7 Free",
+        "weight": "900",
+        "status": "unloaded"
+      },
+      {
+        "family": "Font Awesome 5 Brands",
+        "weight": "400",
+        "status": "unloaded"
+      },
+      {
+        "family": "Font Awesome 5 Free",
+        "weight": "900",
+        "status": "unloaded"
+      },
+      {
+        "family": "Font Awesome 5 Free",
+        "weight": "400",
+        "status": "unloaded"
+      }
+    ],
+    "logoNaturalWidth": 707,
+    "jQuery": "4.0.0",
+    "faviconStatus": 200
+  },
+  "cspConsoleMessages": [],
+  "knownExternalConstraint": {
+    "note": "counter.js is outside this repository. Its HTTP status is recorded and is not a CSP violation.",
+    "counterJs": {
+      "url": "https://nalbam.com/static/sample/counter.js",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    }
+  },
+  "fontAwesomeWoff2": [
+    {
+      "url": "https://use.fontawesome.com/releases/v7.3.1/webfonts/fa-regular-400.woff2",
+      "status": 200
+    }
+  ],
+  "failedRequests": [
+    {
+      "url": "https://nalbam.com/static/sample/counter.js",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    }
+  ],
+  "responses": [
+    {
+      "url": "http://127.0.0.1:41641/",
+      "status": 200
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css",
+      "status": 200
+    },
+    {
+      "url": "https://nalbam.com/static/logo/nginx.png",
+      "status": 200
+    },
+    {
+      "url": "https://code.jquery.com/jquery-4.0.0.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://use.fontawesome.com/releases/v7.3.1/css/all.css",
+      "status": 200
+    },
+    {
+      "url": "https://use.fontawesome.com/releases/v7.3.1/webfonts/fa-regular-400.woff2",
+      "status": 200
+    }
+  ]
+}
