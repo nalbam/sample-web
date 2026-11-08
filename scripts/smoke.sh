@@ -100,12 +100,52 @@ check_port() {
 
 # --- sample-web checks ----------------------------------------------------------
 
+# The expected Content-Security-Policy is the value in the nginx template.
+TEMPLATE="$(dirname "$0")/../nginx/templates/default.conf.template"
+CSP="$(sed -n 's/^ *add_header Content-Security-Policy "\(.*\)" always;$/\1/p' "$TEMPLATE")"
+[ -n "$CSP" ] || fail "no Content-Security-Policy in $TEMPLATE"
+
+# header_value NAME reads response headers on stdin and prints the value of
+# NAME, matched without case and without the trailing CR.
+header_value() {
+  tr -d '\r' | awk -v name="$1" '
+    { i = index($0, ":") }
+    i > 0 && tolower(substr($0, 1, i - 1)) == tolower(name) {
+      v = substr($0, i + 1); sub(/^[ \t]+/, "", v); sub(/[ \t]+$/, "", v); value = v
+    }
+    END { print value }'
+}
+
+# check_headers PATH checks the security headers of the response to PATH,
+# whatever its status code.
+check_headers() {
+  local headers name want got
+  headers="$(http -o /dev/null -D - "http://localhost:$PORT$1")" || fail "GET $1"
+  for name in X-Content-Type-Options Referrer-Policy X-Frame-Options Content-Security-Policy; do
+    case "$name" in
+      X-Content-Type-Options) want=nosniff ;;
+      Referrer-Policy) want=no-referrer ;;
+      X-Frame-Options) want=DENY ;;
+      Content-Security-Policy) want="$CSP" ;;
+    esac
+    got="$(header_value "$name" <<< "$headers")"
+    [ "$got" = "$want" ] || fail "GET $1: $name is '$got', expected '$want'"
+  done
+  [[ "$got" == *"default-src 'self'"* && "$got" == *"frame-ancestors 'none'"* ]] ||
+    fail "GET $1: Content-Security-Policy lacks default-src 'self' or frame-ancestors 'none'"
+  echo "ok: GET $1 has the security headers"
+}
+
 start --cap-drop ALL
 check_health
 check_get / '<title>Hello, world!</title>'
 check_get /favicon.ico
 check_status /does-not-exist 404
+check_headers /
+check_headers /health
+check_headers /does-not-exist
 check_non_root
 check_port --cap-drop ALL
+check_headers /
 
 echo "smoke test passed: $IMAGE $VERSION"

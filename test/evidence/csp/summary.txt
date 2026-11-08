@@ -1,0 +1,13 @@
+CSP probe 2026-11-08T02:45:30.185Z
+Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://nalbam.com; style-src 'self' https://cdn.jsdelivr.net https://use.fontawesome.com; font-src https://use.fontawesome.com; img-src 'self' https://nalbam.com data:; connect-src 'self' https://nalbam.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+ok: page HTTP 200 with the template CSP
+ok: no securitypolicyviolation events
+ok: no CSP console messages
+ok: Bootstrap .btn-primary background is rgb(13, 110, 253)
+ok: Font Awesome font on .fa-thumbs-up::before
+ok: Font Awesome woff2 HTTP 200
+ok: logo loaded (naturalWidth > 0)
+ok: jQuery loaded
+ok: /favicon.ico HTTP 200
+known external constraint, not a CSP violation: counter.js net::ERR_BLOCKED_BY_ORB
+all checks passed

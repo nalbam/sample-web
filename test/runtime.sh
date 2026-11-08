@@ -2,12 +2,13 @@
 #
 # Offline runtime test for sample-web.
 #
-# Usage: sh test/runtime.sh   (run from the repository root inside nginx:1.30-alpine)
+# Usage: sh test/runtime.sh   (run from the repository root inside nginx:1.31-alpine)
 #
 # The Dockerfile build stage runs this test. It renders nginx/templates with the
 # image's own envsubst entrypoint script, a non-default PORT and a test VERSION,
 # starts Nginx from nginx/nginx.conf as the unprivileged nginx user on that port,
-# and checks /health, the static files from src/ and a 404.
+# and checks /health, the static files from src/, a 404 and the security
+# headers of those responses.
 # Uses no network beyond 127.0.0.1 and no secrets.
 
 set -eu
@@ -150,6 +151,49 @@ grep -qF 'id="host">sample-web<' "$root/src/index.html" || fail "index.html: sam
 
 fetch /does-not-exist
 [ "$status" = "404" ] && ok "/does-not-exist HTTP 404" || fail "/does-not-exist HTTP '$status', expected 404"
+
+# --- Security headers ---------------------------------------------------------
+
+# The expected Content-Security-Policy is the value in the template.
+csp="$(sed -n 's/^ *add_header Content-Security-Policy "\(.*\)" always;$/\1/p' "$root/nginx/templates/default.conf.template")"
+[ -n "$csp" ] || fail "no Content-Security-Policy in nginx/templates/default.conf.template"
+
+# header NAME -> the value of header NAME in $tmp/headers, matched without case.
+header() {
+  tr -d '\r' <"$tmp/headers" | awk -v name="$1" '
+    { i = index($0, ":") }
+    i > 0 && tolower(substr($0, 1, i - 1)) == tolower(name) {
+      v = substr($0, i + 1); sub(/^[ \t]+/, "", v); sub(/[ \t]+$/, "", v); value = v
+    }
+    END { print value }'
+}
+
+# check_headers PATH checks the security headers of the response to PATH.
+# It uses curl: busybox wget stops before it reads the headers of a 404.
+check_headers() {
+  rm -f "$tmp/headers"
+  if ! curl -sS --max-time 10 -o /dev/null -D "$tmp/headers" "http://127.0.0.1:$port$1"; then
+    fail "$1: curl failed"
+    return
+  fi
+  before=$failures
+  for pair in "X-Content-Type-Options=nosniff" "Referrer-Policy=no-referrer" "X-Frame-Options=DENY" "Content-Security-Policy=$csp"; do
+    name="${pair%%=*}"
+    want="${pair#*=}"
+    got="$(header "$name")"
+    [ "$got" = "$want" ] || fail "$1: $name is '$got', expected '$want'"
+  done
+  got="$(header Content-Security-Policy)"
+  case "$got" in *"default-src 'self'"*) ;; *) fail "$1: Content-Security-Policy has no default-src 'self'" ;; esac
+  case "$got" in *"frame-ancestors 'none'"*) ;; *) fail "$1: Content-Security-Policy has no frame-ancestors 'none'" ;; esac
+  if [ "$failures" = "$before" ]; then
+    ok "$1 security headers"
+  fi
+}
+
+check_headers /
+check_headers /health
+check_headers /does-not-exist
 
 if [ "$failures" -gt 0 ]; then
   echo "--- error.log"
