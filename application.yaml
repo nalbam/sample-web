@@ -1,4 +1,4 @@
-apiVersion: agent.opspresso.com/v1
+apiVersion: agent.opspresso.com/v3
 kind: Application
 spec:
   name: sample-web-6
@@ -6,14 +6,22 @@ spec:
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
   description: Nginx static sample web
 runtime:
+  type: k8s
+  architecture: arm64
   port: 8080
   health: /health
+pipeline:
+  trigger:
+    branch: main
   build:
     context: .
     dockerfile: Dockerfile
   test:
     image: nginx:1.31-alpine
     command: sh test/runtime.sh
+# Promotion order: a push to main deploys to dev; prod receives a Release only by promotion.
 environments:
-  dev: {}
-  prod: {}
+  - name: dev
+    size: small
+  - name: prod
+    size: small
