@@ -1,19 +1,16 @@
-apiVersion: agent.opspresso.com/v1
+apiVersion: agent.opspresso.com/v4
 kind: Application
 spec:
-  name: sample-web-6
-  repository: nalbam/sample-web
+  name: e2e-two-web
+  repository: github.com/nalbam/sample-web
   owner: dBT43yQ7DQIIIMlYbjiXsIr8tbuIgVJA
-  description: Nginx static sample web
+  description: E2E check of the eb-amd64-two pipeline (dev, then two)
 runtime:
   port: 8080
   health: /health
-  build:
-    context: .
-    dockerfile: Dockerfile
-  test:
-    image: nginx:1.31-alpine
-    command: sh test/runtime.sh
-environments:
-  dev: {}
-  prod: {}
+build:
+  context: .
+  dockerfile: Dockerfile
+test:
+  image: nginx:1.31-alpine
+  command: sh test/runtime.sh
